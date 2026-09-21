@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Portal – BloodConnect</title>
+  <meta name="description" content="Administrative command center for BloodConnect – Blood Donation Network. Manage requests, verify hospital needs, and supervise voluntary donors.">
+
+  <!-- Shared Design System & Styles -->
+  <link rel="stylesheet" href="style.css">
+
+  <!-- Supabase Official Client JS -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="admin-body">
+
+  <!-- Admin Header -->
+  <header class="admin-header">
+    <div class="container admin-header-container">
+      <div style="display: flex; align-items: center; gap: 1rem;">
+        <a href="index.html" class="logo">
+          <div class="logo-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M12 2L4.5 10.5C3 12 2 14 2 16a10 10 0 0 0 20 0c0-2-1-4-2.5-5.5L12 2z"></path>
+            </svg>
+          </div>
+          <div class="logo-text">Blood<span>Connect</span></div>
+        </a>
+        <span class="admin-badge">Admin Control Portal</span>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 1rem;">
+        <a href="index.html" class="btn btn-outline btn-sm">
+          ← Back to Main Site
+        </a>
+
+        <!-- Admin Profile Info -->
+        <div id="adminUserBadge" style="display: none; align-items: center; gap: 0.5rem;">
+          <div class="user-avatar-circle" style="background: var(--text-dark);" id="adminAvatar">A</div>
+          <span style="font-size: 0.875rem; font-weight: 600;" id="adminName">Admin User</span>
+          <button class="btn btn-secondary btn-sm" id="btnAdminLogout" style="margin-left: 0.5rem;">
+            Logout
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Access Guard: Shown if user is not authorized as admin -->
+  <div class="container" id="adminAccessDenied" style="display: none; padding: 4rem 1rem;">
+    <div class="state-box" style="max-width: 580px; margin: 0 auto; background: #ffffff;">
+      <div class="state-icon" style="color: var(--primary);">🔒</div>
+      <h2 class="state-title" style="font-size: 1.5rem;">Administrator Privileges Required</h2>
+      <p class="state-desc">
+        This control dashboard is restricted to verified administrators and hospital verification coordinators.
+      </p>
+
+      <div style="background: var(--bg-subtle); padding: 1.25rem; border-radius: var(--radius-md); margin-bottom: 1.5rem; text-align: left; font-size: 0.875rem;">
+        <strong style="color: var(--text-dark); display: block; margin-bottom: 0.5rem;">Evaluation / Demonstration Quick Login:</strong>
+        <p style="color: var(--text-muted); margin-bottom: 0.75rem;">
+          Sign in using the official administrator role to test request verification, donor management, and network supervision:
+        </p>
+        <button class="btn btn-primary btn-full" id="btnQuickAdminLogin">
+          ⚡ Sign In as Admin (Noeline Gaikwad)
+        </button>
+      </div>
+
+      <div style="display: flex; justify-content: center; gap: 1rem;">
+        <a href="index.html" class="btn btn-secondary">Return to Homepage</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Authorized Admin Dashboard View -->
+  <div class="container" id="adminDashboardView" style="display: none; padding-top: 1.5rem; padding-bottom: 4rem;">
+    
+    <!-- Dashboard Top Bar -->
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem;">
+      <div>
+        <h1 style="font-size: 1.75rem; margin-bottom: 0.25rem;">Network Overview & Operations</h1>
+        <p style="font-size: 0.9375rem; color: var(--text-muted);">Real-time monitoring of blood requests, donor availability, and verified responses.</p>
+      </div>
+      <div style="display: flex; gap: 0.75rem;">
+        <button class="btn btn-secondary btn-sm" id="btnRefreshAdminData">
+          🔄 Refresh Data
+        </button>
+        <button class="btn btn-primary btn-sm" id="btnAdminLogDonation">
+          + Record Donation
+        </button>
+      </div>
+    </div>
+
+    <!-- Section 11: Overview KPI Cards -->
+    <div class="admin-kpi-grid">
+      <div class="kpi-card">
+        <span class="kpi-title">Total Donors</span>
+        <span class="kpi-value" id="kpiTotalDonors">--</span>
+      </div>
+
+      <div class="kpi-card" style="border-bottom: 3px solid var(--accent-green);">
+        <span class="kpi-title">Available Donors</span>
+        <span class="kpi-value" id="kpiAvailableDonors" style="color: var(--accent-green);">--</span>
+      </div>
+
+      <div class="kpi-card" style="border-bottom: 3px solid var(--accent-amber);">
+        <span class="kpi-title">Pending Requests</span>
+        <span class="kpi-value" id="kpiPendingRequests" style="color: var(--accent-amber);">--</span>
+      </div>
+
+      <div class="kpi-card" style="border-bottom: 3px solid var(--primary);">
+        <span class="kpi-title">Verified Requests</span>
+        <span class="kpi-value" id="kpiVerifiedRequests" style="color: var(--primary);">--</span>
+      </div>
+
+      <div class="kpi-card" style="border-bottom: 3px solid var(--secondary);">
+        <span class="kpi-title">Fulfilled Requests</span>
+        <span class="kpi-value" id="kpiFulfilledRequests" style="color: var(--secondary);">--</span>
+      </div>
+
+      <div class="kpi-card">
+        <span class="kpi-title">Total Responses</span>
+        <span class="kpi-value" id="kpiTotalResponses">--</span>
+      </div>
+    </div>
+
+    <!-- Navigation Tabs for Admin Sections -->
+    <div class="admin-tabs" id="adminMainTabs">
+      <button class="admin-tab active" data-tab="pending" id="tabPending">
+        🚨 Pending Verification (<span id="pendingBadgeCount">0</span>)
+      </button>
+      <button class="admin-tab" data-tab="allRequests" id="tabAllRequests">
+        📋 All Blood Requests
+      </button>
+      <button class="admin-tab" data-tab="donors" id="tabDonors">
+        👥 Donors Directory
+      </button>
+      <button class="admin-tab" data-tab="responses" id="tabResponses">
+        🤝 Responses & Connections
+      </button>
+    </div>
+
+    <!-- TAB 1: Pending Requests (Requires Verification / Rejection) -->
+    <div class="admin-tab-content" id="contentPending">
+      <div class="admin-table-card">
+        <div style="padding: 1.25rem; border-bottom: 1px solid var(--border-light); background: #fff; display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <h3 style="font-size: 1.125rem;">Requests Awaiting Hospital Verification</h3>
+            <p style="font-size: 0.8125rem; color: var(--text-muted);">
+              Review incoming patient submissions before publishing them to public voluntary donors.
+            </p>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="admin-table" id="pendingRequestsTable">
+            <thead>
+              <tr>
+                <th>Patient</th>
+                <th>Blood</th>
+                <th>Hospital & Location</th>
+                <th>Units</th>
+                <th>Priority</th>
+                <th>Required Date</th>
+                <th>Notes</th>
+                <th style="text-align: right;">Verification Action</th>
+              </tr>
+            </thead>
+            <tbody id="pendingRequestsTbody">
+              <!-- Rendered dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 2: All Blood Requests -->
+    <div class="admin-tab-content" id="contentAllRequests" style="display: none;">
+      <div class="admin-table-card">
+        <div style="padding: 1.25rem; border-bottom: 1px solid var(--border-light); background: #fff; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+          <h3 style="font-size: 1.125rem;">Master Blood Requests Database</h3>
+          <div style="display: flex; gap: 0.75rem; align-items: center;">
+            <label for="filterRequestStatus" style="font-size: 0.875rem; font-weight: 600; color: var(--text-muted);">Status:</label>
+            <select id="filterRequestStatus" class="form-select" style="padding: 0.4rem 0.75rem; font-size: 0.875rem; width: auto;">
+              <option value="ALL">All Statuses</option>
+              <option value="pending">Pending</option>
+              <option value="verified">Verified</option>
+              <option value="fulfilled">Fulfilled</option>
+              <option value="rejected">Rejected</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="admin-table" id="allRequestsTable">
+            <thead>
+              <tr>
+                <th>Patient</th>
+                <th>Blood Group</th>
+                <th>Hospital</th>
+                <th>Location</th>
+                <th>Units</th>
+                <th>Priority</th>
+                <th>Required Date</th>
+                <th>Status</th>
+                <th style="text-align: right;">Manage Status</th>
+              </tr>
+            </thead>
+            <tbody id="allRequestsTbody">
+              <!-- Rendered dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 3: Donors Directory -->
+    <div class="admin-tab-content" id="contentDonors" style="display: none;">
+      <div class="admin-table-card">
+        <div style="padding: 1.25rem; border-bottom: 1px solid var(--border-light); background: #fff; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+          <div>
+            <h3 style="font-size: 1.125rem;">Registered Voluntary Donors</h3>
+            <p style="font-size: 0.8125rem; color: var(--text-muted);">Complete registry of community donors.</p>
+          </div>
+          <div style="display: flex; gap: 0.75rem;">
+            <input type="text" id="adminSearchDonorsInput" class="form-input" placeholder="Search by name or location..." style="padding: 0.4rem 0.75rem; font-size: 0.875rem; width: 240px;">
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="admin-table" id="donorsTable">
+            <thead>
+              <tr>
+                <th>Full Name</th>
+                <th>Blood Group</th>
+                <th>Location</th>
+                <th>Phone</th>
+                <th>Email</th>
+                <th>Availability</th>
+                <th>Role</th>
+                <th>Joined Date</th>
+              </tr>
+            </thead>
+            <tbody id="donorsTbody">
+              <!-- Rendered dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 4: Responses & Connections -->
+    <div class="admin-tab-content" id="contentResponses" style="display: none;">
+      <div class="admin-table-card">
+        <div style="padding: 1.25rem; border-bottom: 1px solid var(--border-light); background: #fff;">
+          <h3 style="font-size: 1.125rem;">Donor Help Responses</h3>
+          <p style="font-size: 0.8125rem; color: var(--text-muted);">
+            Connections generated when voluntary donors respond "I Can Help" to verified requests.
+          </p>
+        </div>
+
+        <div class="table-responsive">
+          <table class="admin-table" id="responsesTable">
+            <thead>
+              <tr>
+                <th>Request / Patient</th>
+                <th>Blood Group</th>
+                <th>Responding Donor</th>
+                <th>Donor Contact</th>
+                <th>Status</th>
+                <th>Date Offered</th>
+                <th style="text-align: right;">Action</th>
+              </tr>
+            </thead>
+            <tbody id="responsesTbody">
+              <!-- Rendered dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Admin Record Donation Modal -->
+  <div class="modal-overlay" id="adminDonationModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title">Record Completed Donation</h3>
+        <button class="modal-close-btn" data-close="adminDonationModal">&times;</button>
+      </div>
+      <form id="adminDonationForm">
+        <div class="modal-body">
+          <div class="form-group" style="margin-bottom: 1rem;">
+            <label for="admDonorSelect" class="form-label">Select Donor *</label>
+            <select id="admDonorSelect" class="form-select" required>
+              <!-- Populated dynamically -->
+            </select>
+          </div>
+          <div class="form-group" style="margin-bottom: 1rem;">
+            <label for="admDonDate" class="form-label">Donation Date *</label>
+            <input type="date" id="admDonDate" class="form-input" required>
+          </div>
+          <div class="form-group" style="margin-bottom: 1rem;">
+            <label for="admDonUnits" class="form-label">Units Donated *</label>
+            <input type="number" id="admDonUnits" class="form-input" min="1" max="10" value="1" required>
+          </div>
+          <div class="form-group">
+            <label for="admDonNotes" class="form-label">Hospital / Camp / Notes</label>
+            <input type="text" id="admDonNotes" class="form-input" placeholder="e.g. Sahyadri Hospital blood drive">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-close="adminDonationModal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Donation Record</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Footer Credit -->
+  <footer style="background: #0f172a; color: #94a3b8; padding: 2rem 0; margin-top: auto; border-top: 1px solid #1e293b;">
+    <div class="container" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; font-size: 0.875rem;">
+      <div>BloodConnect Administrator Management System</div>
+      <div style="color: #f8fafc; font-weight: 600;">BloodConnect — Developed by Noeline Gaikwad</div>
+    </div>
+  </footer>
+
+  <!-- Admin Scripts -->
+  <script type="module" src="config.js"></script>
+  <script type="module" src="admin.js"></script>
+</body>
+</html>

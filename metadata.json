@@ -1,0 +1,6 @@
+{
+  "name": "BloodConnect – Blood Donation Network",
+  "description": "A comprehensive blood donation platform connecting voluntary donors with verified urgent blood requests, featuring donor availability management, donation tracking, and administrative verification.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

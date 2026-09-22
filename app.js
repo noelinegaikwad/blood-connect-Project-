@@ -175,36 +175,61 @@ function setLocalFallback(key, value) {
 }
 
 // ============================================================================
-// Application Bootstrapping
+// Multi-Page Routing Map & Compatibility Matrix Constants
 // ============================================================================
-function bootApp() {
-  try {
-    initSupabase();
-  } catch (e) {
-    console.warn('initSupabase warning:', e);
-  }
+const PAGE_MAP = {
+  'home': 'pageHome',
+  'find-donor': 'pageFindDonor',
+  'blood-requests': 'pageBloodRequests',
+  'how-it-works': 'pageHowItWorks',
+  'compatibility': 'pageCompatibility',
+  'login': 'pageLogin',
+  'signup': 'pageSignup',
+  'dashboard': 'pageDashboard'
+};
 
-  try {
-    setupUIEventListeners();
-  } catch (e) {
-    console.error('setupUIEventListeners error:', e);
+const COMPAT_DATA = {
+  'O-': {
+    donate: ['O-', 'O+', 'A-', 'A+', 'B-', 'B+', 'AB-', 'AB+'],
+    receive: ['O-'],
+    note: 'O- is the Universal Red Blood Cell Donor and can donate to all blood types in emergencies.'
+  },
+  'O+': {
+    donate: ['O+', 'A+', 'B+', 'AB+'],
+    receive: ['O+', 'O-'],
+    note: 'O+ is widely needed and can donate to any positive blood group (O+, A+, B+, AB+).'
+  },
+  'A-': {
+    donate: ['A-', 'A+', 'AB-', 'AB+'],
+    receive: ['A-', 'O-'],
+    note: 'A- can safely donate red blood cells to A and AB patients of both Rh factors.'
+  },
+  'A+': {
+    donate: ['A+', 'AB+'],
+    receive: ['A+', 'A-', 'O+', 'O-'],
+    note: 'A+ is one of the most common types and can receive red cells from A+, A-, O+, and O-.'
+  },
+  'B-': {
+    donate: ['B-', 'B+', 'AB-', 'AB+'],
+    receive: ['B-', 'O-'],
+    note: 'B- is rare and essential. It can donate to B and AB patients of either Rh type.'
+  },
+  'B+': {
+    donate: ['B+', 'AB+'],
+    receive: ['B+', 'B-', 'O+', 'O-'],
+    note: 'B+ can receive red blood cells from both B and O donors.'
+  },
+  'AB-': {
+    donate: ['AB-', 'AB+'],
+    receive: ['AB-', 'A-', 'B-', 'O-'],
+    note: 'AB- is among the rarest types and can receive from all Rh-negative blood groups.'
+  },
+  'AB+': {
+    donate: ['AB+'],
+    receive: ['O-', 'O+', 'A-', 'A+', 'B-', 'B+', 'AB-', 'AB+'],
+    note: 'AB+ is the Universal Recipient and can safely receive red blood cells from any blood type.'
   }
-
-  // Load backend data without blocking user interactions
-  checkAuthSession().catch(e => console.warn('checkAuthSession warn:', e));
-  loadStatistics().catch(e => console.warn('loadStatistics warn:', e));
-  loadDonors().catch(e => console.warn('loadDonors warn:', e));
-  loadBloodRequests().catch(e => console.warn('loadBloodRequests warn:', e));
-}
-
-if (typeof document !== 'undefined') {
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', bootApp);
-  } else {
-    // DOM is already parsed (interactive or complete), bootstrap immediately!
-    bootApp();
-  }
-}
+};
 
 function initSupabase() {
   try {
@@ -299,29 +324,22 @@ async function fetchUserProfile(userId) {
 }
 
 function renderNavUser() {
-  const guestActions = document.getElementById('guestActions');
-  const userMenu = document.getElementById('userMenu');
-  const navUserName = document.getElementById('navUserName');
-  const navUserBlood = document.getElementById('navUserBlood');
-  const navUserAvatar = document.getElementById('navUserAvatar');
-  const menuAdminLink = document.getElementById('menuAdminLink');
+  const guestItems = document.querySelectorAll('.nav-item-guest');
+  const authItems = document.querySelectorAll('.nav-item-auth');
+  const adminItems = document.querySelectorAll('.nav-item-admin');
 
   if (currentProfile) {
-    guestActions.style.display = 'none';
-    userMenu.style.display = 'flex';
-    navUserName.textContent = currentProfile.full_name.split(' ')[0] || 'Donor';
-    navUserBlood.textContent = currentProfile.blood_group || 'O+';
-    navUserAvatar.textContent = (currentProfile.full_name[0] || 'D').toUpperCase();
-
-    // Show Admin Portal link if user is administrator
+    guestItems.forEach(el => el.style.display = 'none');
+    authItems.forEach(el => el.style.display = 'block');
     if (currentProfile.role === 'admin') {
-      menuAdminLink.style.display = 'flex';
+      adminItems.forEach(el => el.style.display = 'block');
     } else {
-      menuAdminLink.style.display = 'none';
+      adminItems.forEach(el => el.style.display = 'none');
     }
   } else {
-    guestActions.style.display = 'flex';
-    userMenu.style.display = 'none';
+    guestItems.forEach(el => el.style.display = 'block');
+    authItems.forEach(el => el.style.display = 'none');
+    adminItems.forEach(el => el.style.display = 'none');
   }
 }
 
@@ -993,8 +1011,9 @@ async function handleBloodRequestSubmit(e) {
 // ============================================================================
 // Authentication: Alerts & Quick Demo Login
 // ============================================================================
-function showAuthAlert(html, type = 'error') {
-  const box = document.getElementById('authAlertBox');
+function showAuthAlert(html, type = 'error', formType = 'login') {
+  const boxId = formType === 'signup' ? 'authAlertBoxSignup' : 'authAlertBox';
+  const box = document.getElementById(boxId) || document.getElementById('authAlertBox');
   if (!box) return;
   box.className = `auth-alert-box ${type}`;
   box.innerHTML = html;
@@ -1002,34 +1021,21 @@ function showAuthAlert(html, type = 'error') {
 }
 
 function hideAuthAlert() {
-  const box = document.getElementById('authAlertBox');
-  if (box) {
-    box.style.display = 'none';
-    box.innerHTML = '';
+  const box1 = document.getElementById('authAlertBox');
+  if (box1) {
+    box1.style.display = 'none';
+    box1.innerHTML = '';
+  }
+  const box2 = document.getElementById('authAlertBoxSignup');
+  if (box2) {
+    box2.style.display = 'none';
+    box2.innerHTML = '';
   }
 }
 
 function switchAuthTab(tab = 'login') {
   hideAuthAlert();
-  const tabLogin = document.getElementById('tabLoginBtn');
-  const tabSignup = document.getElementById('tabSignupBtn');
-  const loginForm = document.getElementById('loginForm');
-  const signupForm = document.getElementById('signupForm');
-  const modalTitle = document.getElementById('authModalTitle');
-
-  if (tab === 'signup') {
-    tabSignup?.classList.add('active');
-    tabLogin?.classList.remove('active');
-    if (loginForm) loginForm.style.display = 'none';
-    if (signupForm) signupForm.style.display = 'block';
-    if (modalTitle) modalTitle.textContent = 'Register as a Voluntary Donor';
-  } else {
-    tabLogin?.classList.add('active');
-    tabSignup?.classList.remove('active');
-    if (loginForm) loginForm.style.display = 'block';
-    if (signupForm) signupForm.style.display = 'none';
-    if (modalTitle) modalTitle.textContent = 'Welcome to BloodConnect';
-  }
+  navigateTo(tab);
 }
 
 function quickDemoLogin(role = 'donor') {
@@ -1066,10 +1072,10 @@ function quickDemoLogin(role = 'donor') {
   }
 
   showToast(`Signed in as ${demoProfile.full_name} (${role})`, 'success');
-  closeModal('authModal');
   renderNavUser();
   loadDonors();
   loadBloodRequests();
+  navigateTo('dashboard');
 }
 
 // ============================================================================
@@ -1135,7 +1141,7 @@ async function handleAuthLogin(e) {
             'error'
           );
           document.getElementById('alertGoToSignup')?.addEventListener('click', () => {
-            switchAuthTab('signup');
+            navigateTo('signup');
           });
           showToast('Invalid credentials. Have you registered an account yet?', 'error');
           return;
@@ -1150,11 +1156,11 @@ async function handleAuthLogin(e) {
         currentUser = data.user;
         await fetchUserProfile(data.user.id);
         showToast('Welcome back to BloodConnect!', 'success');
-        closeModal('authModal');
-        document.getElementById('loginForm').reset();
+        document.getElementById('loginForm')?.reset();
         renderNavUser();
         await loadDonors();
         await loadBloodRequests();
+        navigateTo('dashboard');
         return;
       }
     } else {
@@ -1182,11 +1188,11 @@ async function handleAuthLogin(e) {
       currentProfile = match;
       setLocalFallback('active_session', { user: currentUser, profile: currentProfile });
       showToast('Welcome back!', 'success');
-      closeModal('authModal');
-      document.getElementById('loginForm').reset();
+      document.getElementById('loginForm')?.reset();
       renderNavUser();
       await loadDonors();
       await loadBloodRequests();
+      navigateTo('dashboard');
     }
   } catch (err) {
     console.error('Login error:', err);
@@ -1239,7 +1245,7 @@ async function handleAuthSignup(e) {
 
       if (error) {
         console.error('Supabase signUp error:', error);
-        showAuthAlert(`<strong>Registration Failed:</strong> ${escapeHtml(error.message)}`, 'error');
+        showAuthAlert(`<strong>Registration Failed:</strong> ${escapeHtml(error.message)}`, 'error', 'signup');
         showToast(error.message, 'error');
         return;
       }
@@ -1251,14 +1257,15 @@ async function handleAuthSignup(e) {
             `<strong>🎉 Registration Successful!</strong><br>
             A confirmation link was dispatched to <strong>${escapeHtml(email)}</strong>.<br><br>
             1. Open your inbox and click the verification link.<br>
-            2. Once verified, return here to sign in with your password.<br><br>
+            2. Once verified, click <a href="#login" data-nav="login" style="color:var(--primary); font-weight:700;">Login</a> to access your dashboard.<br><br>
             <span style="font-size:0.8125rem; color:var(--text-muted);">
             💡 To bypass email verification: In your Supabase Dashboard, go to <strong>Authentication &gt; Providers &gt; Email</strong> and toggle <strong>OFF "Confirm email"</strong>.
             </span>`,
-            'info'
+            'info',
+            'signup'
           );
           showToast('Account created! Please check your email to verify.', 'info');
-          document.getElementById('signupForm').reset();
+          document.getElementById('signupForm')?.reset();
           return;
         }
 
@@ -1266,11 +1273,11 @@ async function handleAuthSignup(e) {
         currentUser = data.user;
         await fetchUserProfile(data.user.id);
         showToast(`Welcome to BloodConnect, ${fullName}!`, 'success');
-        closeModal('authModal');
-        document.getElementById('signupForm').reset();
+        document.getElementById('signupForm')?.reset();
         renderNavUser();
         await loadDonors();
         await loadStatistics();
+        navigateTo('dashboard');
         return;
       }
     } else {
@@ -1294,15 +1301,15 @@ async function handleAuthSignup(e) {
       currentProfile = newProfile;
       setLocalFallback('active_session', { user: currentUser, profile: currentProfile });
       showToast('Account created successfully! Welcome to BloodConnect.', 'success');
-      closeModal('authModal');
-      document.getElementById('signupForm').reset();
+      document.getElementById('signupForm')?.reset();
       renderNavUser();
       await loadDonors();
       await loadStatistics();
+      navigateTo('dashboard');
     }
   } catch (err) {
     console.error('Signup error:', err);
-    showAuthAlert(`<strong>Could not register account:</strong> ${escapeHtml(err.message)}`, 'error');
+    showAuthAlert(`<strong>Could not register account:</strong> ${escapeHtml(err.message)}`, 'error', 'signup');
     showToast('Could not register account. Please check inputs.', 'error');
   } finally {
     btn.disabled = false;
@@ -1325,6 +1332,7 @@ async function handleLogout() {
   renderNavUser();
   showToast('You have been logged out safely.', 'info');
   await loadBloodRequests();
+  navigateTo('home');
 }
 
 // ============================================================================
@@ -1332,32 +1340,43 @@ async function handleLogout() {
 // ============================================================================
 async function openDashboard() {
   if (!currentProfile) {
-    openAuthModal('login');
+    navigateTo('login');
     return;
   }
 
   // Populate Profile Information
-  document.getElementById('dashFullName').textContent = currentProfile.full_name;
-  document.getElementById('dashEmail').textContent = currentProfile.email;
-  document.getElementById('dashBloodBadge').textContent = currentProfile.blood_group;
-  document.getElementById('dashPhone').textContent = currentProfile.phone || 'Not provided';
-  document.getElementById('dashLocation').textContent = currentProfile.location || 'Pune';
-  document.getElementById('dashRoleBadge').textContent = (currentProfile.role || 'donor').toUpperCase();
+  const fullNameEl = document.getElementById('dashFullName');
+  const emailEl = document.getElementById('dashEmail');
+  const bloodBadgeEl = document.getElementById('dashBloodBadge');
+  const phoneEl = document.getElementById('dashPhone');
+  const locationEl = document.getElementById('dashLocation');
+  const roleBadgeEl = document.getElementById('dashRoleBadge');
+
+  if (fullNameEl) fullNameEl.textContent = currentProfile.full_name;
+  if (emailEl) emailEl.textContent = currentProfile.email;
+  if (bloodBadgeEl) bloodBadgeEl.textContent = currentProfile.blood_group;
+  if (phoneEl) phoneEl.textContent = currentProfile.phone || 'Not provided';
+  if (locationEl) locationEl.textContent = currentProfile.location || 'Pune';
+  if (roleBadgeEl) roleBadgeEl.textContent = (currentProfile.role || 'donor').toUpperCase();
 
   // Availability Toggle
   const toggle = document.getElementById('donorAvailabilityToggle');
   const label = document.getElementById('dashAvailLabel');
   const statusText = document.getElementById('availabilityStatusText');
 
-  toggle.checked = Boolean(currentProfile.is_available);
-  if (toggle.checked) {
-    label.textContent = 'Available to Donate';
-    label.style.color = 'var(--accent-green)';
-    statusText.textContent = 'You are currently listed as available for emergency patient contacts.';
-  } else {
-    label.textContent = 'Unavailable';
-    label.style.color = 'var(--text-muted)';
-    statusText.textContent = 'You are hidden from public donor searches.';
+  if (toggle) {
+    toggle.checked = Boolean(currentProfile.is_available);
+  }
+  if (label && statusText) {
+    if (toggle && toggle.checked) {
+      label.textContent = 'Available to Donate';
+      label.style.color = 'var(--accent-green)';
+      statusText.textContent = 'You are currently listed as available for emergency patient contacts.';
+    } else {
+      label.textContent = 'Unavailable';
+      label.style.color = 'var(--text-muted)';
+      statusText.textContent = 'You are hidden from public donor searches.';
+    }
   }
 
   // Load My Blood Requests
@@ -1365,8 +1384,6 @@ async function openDashboard() {
 
   // Load Donation History
   await loadUserDonationsInDashboard();
-
-  openModal('dashboardModal');
 }
 
 async function handleAvailabilityToggle(e) {
@@ -1559,9 +1576,97 @@ async function handleLogDonationSubmit(e) {
 }
 
 // ============================================================================
+// Multi-Page Navigation & Routing Architecture (Instant discrete page switching)
+// ============================================================================
+function navigateTo(pageName) {
+  hideAuthAlert();
+
+  // Authentication routes guard
+  if (pageName === 'dashboard' && !currentProfile) {
+    showToast('Please sign in to access your donor dashboard.', 'info');
+    pageName = 'login';
+  } else if ((pageName === 'login' || pageName === 'signup') && currentProfile) {
+    pageName = 'dashboard';
+  }
+
+  const targetId = PAGE_MAP[pageName] || 'pageHome';
+  const targetPage = document.getElementById(targetId);
+  if (!targetPage) return;
+
+  // Discrete instant page switch without sliding
+  document.querySelectorAll('.app-page').forEach(page => {
+    page.classList.remove('active');
+  });
+  targetPage.classList.add('active');
+
+  // Synchronize navigation link active states
+  document.querySelectorAll('.nav-link').forEach(link => {
+    const navVal = link.getAttribute('data-nav') || (link.getAttribute('href') || '').replace('#', '');
+    if (navVal === pageName || (pageName === 'home' && (navVal === 'home' || !navVal))) {
+      link.classList.add('active');
+    } else {
+      link.classList.remove('active');
+    }
+  });
+
+  // Close mobile navigation drawer if open
+  const navLinks = document.getElementById('navLinks');
+  if (navLinks) navLinks.classList.remove('show');
+
+  // Instant scroll to top (no sliding animation)
+  window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+
+  // Quietly synchronize URL hash
+  if (window.history && window.history.replaceState) {
+    window.history.replaceState(null, '', '#' + pageName);
+  }
+
+  // If opening dashboard, load latest donor profile & records
+  if (pageName === 'dashboard' && currentProfile) {
+    openDashboard();
+  }
+}
+
+function renderCompatibilityTool(type) {
+  const data = COMPAT_DATA[type] || COMPAT_DATA['O-'];
+  const donateEl = document.getElementById('compatDonateBadges');
+  const receiveEl = document.getElementById('compatReceiveBadges');
+  const noteEl = document.getElementById('compatSummaryNote');
+
+  if (donateEl) {
+    donateEl.innerHTML = data.donate.map(t => `<span class="compat-badge-pill">${t}</span>`).join('');
+  }
+  if (receiveEl) {
+    receiveEl.innerHTML = data.receive.map(t => `<span class="compat-badge-pill">${t}</span>`).join('');
+  }
+  if (noteEl) {
+    noteEl.textContent = data.note;
+  }
+}
+
+// ============================================================================
 // Modal & UI Event Listeners
 // ============================================================================
 function setupUIEventListeners() {
+  // Initialize interactive compatibility checker
+  renderCompatibilityTool('O-');
+
+  // Initial page setup from URL hash or default to home
+  const initialHash = (window.location.hash || '').replace('#', '');
+  if (PAGE_MAP[initialHash]) {
+    navigateTo(initialHash);
+  } else {
+    navigateTo('home');
+  }
+
+  // Handle browser back and forward button events
+  window.addEventListener('hashchange', () => {
+    const h = (window.location.hash || '').replace('#', '');
+    if (PAGE_MAP[h]) {
+      navigateTo(h);
+    }
+  });
+
   // --------------------------------------------------------------------------
   // 1. Delegated Global Click Dispatcher (Resilient & Immediate for ALL buttons)
   // --------------------------------------------------------------------------
@@ -1583,40 +1688,72 @@ function setupUIEventListeners() {
       return;
     }
 
-    // C. Sign In / Login triggers
-    if (target.closest('#navLoginBtn, #footerLoginLink, #linkSwitchToLogin')) {
+    // C. Multi-Page Navigation: Direct [data-nav] elements
+    const navBtn = target.closest('[data-nav]');
+    if (navBtn) {
       e.preventDefault();
-      openAuthModal('login');
+      const page = navBtn.getAttribute('data-nav');
+      navigateTo(page);
       return;
     }
 
-    // D. Register / Become Donor triggers
-    if (target.closest('#navSignupBtn, #tickerDonorBtn, #heroBecomeDonorBtn, #footerSignupLink, #linkSwitchToSignup')) {
+    // D. Multi-Page Navigation: In-page Anchor Links (#home, #find-donor, etc.)
+    const hashAnchor = target.closest('a[href^="#"]');
+    if (hashAnchor) {
+      const href = hashAnchor.getAttribute('href');
+      const targetHash = href ? href.replace('#', '') : '';
+      if (PAGE_MAP[targetHash]) {
+        e.preventDefault();
+        navigateTo(targetHash);
+        return;
+      }
+    }
+
+    // E. Interactive Blood Compatibility Checker Chips
+    const compatChip = target.closest('.compat-btn-chip');
+    if (compatChip) {
       e.preventDefault();
-      openAuthModal('signup');
+      document.querySelectorAll('.compat-btn-chip').forEach(c => c.classList.remove('active'));
+      compatChip.classList.add('active');
+      const bType = compatChip.dataset.type || 'O-';
+      renderCompatibilityTool(bType);
       return;
     }
 
-    // E. Blood Request Triggers
-    if (target.closest('#heroRequestBloodBtn, #tickerRequestBtn, #btnOpenRequestBloodBottom, #footerRequestLink')) {
+    // F. Sign In / Login triggers
+    if (target.closest('#navLoginBtn, #footerLoginLink, #linkSwitchToLogin, #navLinkLogin, #headerLoginLink')) {
+      e.preventDefault();
+      navigateTo('login');
+      return;
+    }
+
+    // G. Register / Become Donor triggers
+    if (target.closest('#navSignupBtn, #tickerDonorBtn, #heroBecomeDonorBtn, #footerSignupLink, #linkSwitchToSignup, #howBecomeDonorBtn, #navLinkSignup, #headerSignupLink')) {
+      e.preventDefault();
+      navigateTo('signup');
+      return;
+    }
+
+    // H. Blood Request Triggers
+    if (target.closest('#heroRequestBloodBtn, #tickerRequestBtn, #btnOpenRequestBloodBottom, #footerRequestLink, #homeUrgentReqBtn, #howRequestBloodBtn')) {
       e.preventDefault();
       openReqModal();
       return;
     }
 
-    // F. Auth Tabs
+    // I. Auth Tabs
     if (target.closest('#tabLoginBtn')) {
       e.preventDefault();
-      switchAuthTab('login');
+      navigateTo('login');
       return;
     }
     if (target.closest('#tabSignupBtn')) {
       e.preventDefault();
-      switchAuthTab('signup');
+      navigateTo('signup');
       return;
     }
 
-    // G. Quick Evaluation Demo Logins
+    // J. Quick Evaluation Demo Logins
     if (target.closest('#btnQuickDemoDonor')) {
       e.preventDefault();
       quickDemoLogin('donor');
@@ -1628,7 +1765,7 @@ function setupUIEventListeners() {
       return;
     }
 
-    // H. Contact Donor in Donor Cards
+    // K. Contact Donor in Donor Cards
     const contactBtn = target.closest('.btn-contact-donor');
     if (contactBtn) {
       e.preventDefault();
@@ -1642,7 +1779,7 @@ function setupUIEventListeners() {
       return;
     }
 
-    // I. "I Can Help" in Request Cards
+    // L. "I Can Help" in Request Cards
     const helpBtn = target.closest('.btn-help-request');
     if (helpBtn) {
       e.preventDefault();
@@ -1650,7 +1787,7 @@ function setupUIEventListeners() {
       return;
     }
 
-    // J. Log New Donation
+    // M. Log New Donation
     if (target.closest('#btnLogNewDonation')) {
       e.preventDefault();
       const today = new Date().toISOString().split('T')[0];
@@ -1660,21 +1797,21 @@ function setupUIEventListeners() {
       return;
     }
 
-    // K. Dashboard Modal Trigger
-    if (target.closest('#menuDashboardBtn')) {
+    // N. Dashboard Trigger
+    if (target.closest('#menuDashboardBtn, #navLinkDashboard')) {
       e.preventDefault();
-      openDashboard();
+      navigateTo('dashboard');
       return;
     }
 
-    // L. User Logout
-    if (target.closest('#menuLogoutBtn')) {
+    // O. User Logout
+    if (target.closest('#menuLogoutBtn, #navLinkLogout, #btnDashboardLogout')) {
       e.preventDefault();
       handleLogout();
       return;
     }
 
-    // M. Search Reset Buttons
+    // P. Search Reset Buttons
     if (target.closest('#btnResetSearch, #btnResetSearchFromEmpty')) {
       e.preventDefault();
       const sGroup = document.getElementById('searchBloodGroup');
@@ -1687,7 +1824,7 @@ function setupUIEventListeners() {
       return;
     }
 
-    // N. Blood Group Filter Chips
+    // Q. Blood Group Filter Chips
     const bloodChip = target.closest('.blood-chip');
     if (bloodChip) {
       e.preventDefault();
@@ -1702,7 +1839,7 @@ function setupUIEventListeners() {
       return;
     }
 
-    // O. Request Priority Filter Tabs
+    // R. Request Priority Filter Tabs
     const filterTab = target.closest('.filter-tab');
     if (filterTab) {
       e.preventDefault();
@@ -1713,7 +1850,7 @@ function setupUIEventListeners() {
       return;
     }
 
-    // P. Supabase Config Trigger
+    // S. Supabase Config Trigger
     if (target.closest('#footerDbConfigBtn')) {
       e.preventDefault();
       const cfgUrl = document.getElementById('cfgSupabaseUrl');
@@ -1724,7 +1861,7 @@ function setupUIEventListeners() {
       return;
     }
 
-    // Q. Reset Supabase Config
+    // T. Reset Supabase Config
     if (target.closest('#btnResetDefaultConfig')) {
       e.preventDefault();
       resetSupabaseConfig();
@@ -1744,12 +1881,12 @@ function setupUIEventListeners() {
     });
   }
 
-  // Navigation Links Click Handling (smooth close mobile menu)
+  // Navigation Links Click Handling (instant page switch, closes mobile drawer)
   document.querySelectorAll('.nav-link').forEach(link => {
-    link.addEventListener('click', () => {
-      if (navLinks) navLinks.classList.remove('show');
-      document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
-      link.classList.add('active');
+    link.addEventListener('click', (e) => {
+      e.preventDefault();
+      const page = link.getAttribute('data-nav') || (link.getAttribute('href') || '').replace('#', '');
+      navigateTo(page);
     });
   });
 
@@ -1772,12 +1909,37 @@ function setupUIEventListeners() {
   // Direct Click Handlers for Top-Level Navigation Actions
   document.getElementById('navLoginBtn')?.addEventListener('click', (e) => {
     e.preventDefault();
-    openAuthModal('login');
+    navigateTo('login');
   });
 
   document.getElementById('navSignupBtn')?.addEventListener('click', (e) => {
     e.preventDefault();
-    openAuthModal('signup');
+    navigateTo('signup');
+  });
+
+  document.getElementById('navLinkLogin')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    navigateTo('login');
+  });
+
+  document.getElementById('navLinkSignup')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    navigateTo('signup');
+  });
+
+  document.getElementById('navLinkDashboard')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    navigateTo('dashboard');
+  });
+
+  document.getElementById('navLinkLogout')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    handleLogout();
+  });
+
+  document.getElementById('btnDashboardLogout')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    handleLogout();
   });
 
   document.getElementById('btnLoginSubmit')?.addEventListener('click', (e) => {
@@ -1916,4 +2078,36 @@ function escapeHtml(text) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
+}
+
+// ============================================================================
+// Application Bootstrapping (Runs once all constants & functions are defined)
+// ============================================================================
+function bootApp() {
+  try {
+    initSupabase();
+  } catch (e) {
+    console.warn('initSupabase warning:', e);
+  }
+
+  try {
+    setupUIEventListeners();
+  } catch (e) {
+    console.error('setupUIEventListeners error:', e);
+  }
+
+  // Load backend data without blocking user interactions
+  checkAuthSession().catch(e => console.warn('checkAuthSession warn:', e));
+  loadStatistics().catch(e => console.warn('loadStatistics warn:', e));
+  loadDonors().catch(e => console.warn('loadDonors warn:', e));
+  loadBloodRequests().catch(e => console.warn('loadBloodRequests warn:', e));
+}
+
+if (typeof document !== 'undefined') {
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bootApp);
+  } else {
+    // DOM is already parsed (interactive or complete), bootstrap immediately!
+    bootApp();
+  }
 }

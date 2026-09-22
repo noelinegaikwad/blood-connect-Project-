@@ -181,8 +181,9 @@ const PAGE_MAP = {
   'home': 'pageHome',
   'find-donor': 'pageFindDonor',
   'blood-requests': 'pageBloodRequests',
+  'blood-groups': 'pageBloodGroups',
   'how-it-works': 'pageHowItWorks',
-  'compatibility': 'pageCompatibility',
+  'compatibility': 'pageBloodGroups',
   'login': 'pageLogin',
   'signup': 'pageSignup',
   'dashboard': 'pageDashboard'
@@ -1720,6 +1721,18 @@ function setupUIEventListeners() {
       return;
     }
 
+    // E2. Find Donors by Blood Group from Blood Group Cards
+    const findGroupBtn = target.closest('.btn-find-by-group');
+    if (findGroupBtn) {
+      e.preventDefault();
+      const bGroup = findGroupBtn.dataset.group;
+      const sGroup = document.getElementById('searchBloodGroup');
+      if (sGroup) sGroup.value = bGroup;
+      navigateTo('find-donor');
+      handleSearchDonors();
+      return;
+    }
+
     // F. Sign In / Login triggers
     if (target.closest('#navLoginBtn, #footerLoginLink, #linkSwitchToLogin, #navLinkLogin, #headerLoginLink')) {
       e.preventDefault();
@@ -1728,14 +1741,14 @@ function setupUIEventListeners() {
     }
 
     // G. Register / Become Donor triggers
-    if (target.closest('#navSignupBtn, #tickerDonorBtn, #heroBecomeDonorBtn, #footerSignupLink, #linkSwitchToSignup, #howBecomeDonorBtn, #navLinkSignup, #headerSignupLink')) {
+    if (target.closest('#navSignupBtn, #heroBecomeDonorBtn, #footerSignupLink, #linkSwitchToSignup, #howBecomeDonorBtn, #navLinkSignup, #headerSignupLink')) {
       e.preventDefault();
       navigateTo('signup');
       return;
     }
 
     // H. Blood Request Triggers
-    if (target.closest('#heroRequestBloodBtn, #tickerRequestBtn, #btnOpenRequestBloodBottom, #footerRequestLink, #homeUrgentReqBtn, #howRequestBloodBtn')) {
+    if (target.closest('#heroRequestBloodBtn, #btnOpenRequestBloodBottom, #footerRequestLink, #homeUrgentReqBtn, #howRequestBloodBtn')) {
       e.preventDefault();
       openReqModal();
       return;

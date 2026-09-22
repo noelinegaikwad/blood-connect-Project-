@@ -29,15 +29,11 @@
 </head>
 <body>
 
-  <!-- Top Emergency Ticker -->
+  <!-- Top Emergency Ticker (Clean alert bar without duplicate CTA buttons) -->
   <div class="emergency-ticker" id="emergencyTicker">
     <div class="ticker-content">
       <span class="ticker-badge">Live Need</span>
       <span>🚨 Urgent requirements for <strong>O-Negative</strong> and <strong>B-Negative</strong> in regional trauma centers.</span>
-    </div>
-    <div class="ticker-actions">
-      <button class="ticker-btn" id="tickerRequestBtn">Request Blood</button>
-      <button class="ticker-btn" id="tickerDonorBtn">Register to Donate</button>
     </div>
   </div>
 
@@ -59,6 +55,7 @@
           <li><a href="#home" class="nav-link active" id="navHome" data-nav="home">Home</a></li>
           <li><a href="#find-donor" class="nav-link" id="navFindDonor" data-nav="find-donor">Find Donor</a></li>
           <li><a href="#blood-requests" class="nav-link" id="navBloodRequests" data-nav="blood-requests">Blood Requests</a></li>
+          <li><a href="#blood-groups" class="nav-link" id="navBloodGroups" data-nav="blood-groups">Blood Groups</a></li>
           <li><a href="#how-it-works" class="nav-link" id="navHowItWorks" data-nav="how-it-works">How It Works</a></li>
           
           <!-- Logged Out Items -->
@@ -608,8 +605,8 @@
       </section>
     </div>
 
-    <!-- PAGE 5: COMPATIBILITY (Dedicated medical guide & interactive tool) -->
-    <div class="app-page" id="pageCompatibility">
+    <!-- PAGE 5: BLOOD GROUPS (Comprehensive, visually rich compatibility guide) -->
+    <div class="app-page" id="pageBloodGroups">
       <div class="page-top-bar">
         <div class="container page-breadcrumb-nav">
           <button class="btn-back-home" data-nav="home">
@@ -620,40 +617,461 @@
             Back to Home
           </button>
           <div class="breadcrumb-trail">
-            Home / <strong>Blood Compatibility</strong>
+            Home / <strong>Blood Groups</strong>
           </div>
         </div>
       </div>
 
-      <section class="section section-subtle" id="compatibility" style="padding-top: 2rem;">
+      <section class="section section-subtle" id="bloodGroupsSection" style="padding-top: 2rem; padding-bottom: 5rem;">
         <div class="container">
           <div class="section-header">
-            <span class="section-tag">Medical Guide</span>
-            <h2 class="section-title">Blood Group Compatibility Guide</h2>
+            <span class="section-tag">Transfusion Science & Compatibility</span>
+            <h2 class="section-title">Know Your Blood Group</h2>
             <p class="section-description">
-              Understanding compatibility ensures proper matches and maximizes emergency response speed.
+              Different blood groups have different compatibility patterns. Learn who you can donate red blood cells to and who you can receive them from.
             </p>
           </div>
 
-          <!-- Interactive Compatibility Tool Card -->
-          <div class="compat-tool-card">
+          <!-- Medical Disclaimer & Context Notice -->
+          <div class="blood-notice-box">
+            <div class="blood-notice-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+              </svg>
+            </div>
+            <div class="blood-notice-content">
+              <strong>Clinical Transfusion Notice:</strong>
+              <p>Compatibility shown here is for red blood cell transfusions. Actual blood transfusion decisions must be confirmed by qualified healthcare professionals and blood banks.</p>
+              <div class="blood-notice-footnote">
+                Note: Universal donor (O-) and universal recipient (AB+) classifications apply specifically to red blood cell transfusions, not every type of blood product (plasma compatibility follows inverse rules).
+              </div>
+            </div>
+          </div>
+
+          <!-- 8 Visual Blood Group Cards Grid (4-col desktop, 2-col tablet, 1-col mobile) -->
+          <div class="blood-groups-grid" id="bloodGroupsCardsGrid">
+            
+            <!-- 1. A+ Card -->
+            <div class="blood-group-card">
+              <div class="bg-card-header">
+                <div class="bg-symbol-circle">
+                  <span>A+</span>
+                </div>
+                <div class="bg-header-meta">
+                  <span class="bg-group-title">Blood Group: A+</span>
+                  <span class="donor-type-badge type-compatible">Compatible Donor</span>
+                </div>
+              </div>
+              <p class="bg-card-summary">
+                A+ can donate red blood cells to other positive A and AB patients. One of the most prevalent blood types.
+              </p>
+              <div class="bg-compat-block donate">
+                <div class="bg-compat-label">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                    <polyline points="12 5 19 12 12 19"></polyline>
+                  </svg>
+                  <span>Can Donate Red Blood Cells To:</span>
+                </div>
+                <div class="bg-compat-chips">
+                  <span class="compat-chip donate">A+</span>
+                  <span class="compat-chip donate">AB+</span>
+                </div>
+              </div>
+              <div class="bg-compat-block receive">
+                <div class="bg-compat-label">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <line x1="19" y1="12" x2="5" y2="12"></line>
+                    <polyline points="12 19 5 12 12 5"></polyline>
+                  </svg>
+                  <span>Can Receive Red Blood Cells From:</span>
+                </div>
+                <div class="bg-compat-chips">
+                  <span class="compat-chip receive">A+</span>
+                  <span class="compat-chip receive">A-</span>
+                  <span class="compat-chip receive">O+</span>
+                  <span class="compat-chip receive">O-</span>
+                </div>
+              </div>
+              <div class="bg-card-action">
+                <button class="btn btn-outline btn-sm btn-full btn-find-by-group" data-group="A+">
+                  Find A+ Donors →
+                </button>
+              </div>
+            </div>
+
+            <!-- 2. A- Card -->
+            <div class="blood-group-card">
+              <div class="bg-card-header">
+                <div class="bg-symbol-circle">
+                  <span>A-</span>
+                </div>
+                <div class="bg-header-meta">
+                  <span class="bg-group-title">Blood Group: A-</span>
+                  <span class="donor-type-badge type-compatible">Compatible Donor</span>
+                </div>
+              </div>
+              <p class="bg-card-summary">
+                A- red blood cells lack the Rh factor and can be safely given to all A and AB recipients regardless of Rh status.
+              </p>
+              <div class="bg-compat-block donate">
+                <div class="bg-compat-label">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                    <polyline points="12 5 19 12 12 19"></polyline>
+                  </svg>
+                  <span>Can Donate Red Blood Cells To:</span>
+                </div>
+                <div class="bg-compat-chips">
+                  <span class="compat-chip donate">A-</span>
+                  <span class="compat-chip donate">A+</span>
+                  <span class="compat-chip donate">AB-</span>
+                  <span class="compat-chip donate">AB+</span>
+                </div>
+              </div>
+              <div class="bg-compat-block receive">
+                <div class="bg-compat-label">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <line x1="19" y1="12" x2="5" y2="12"></line>
+                    <polyline points="12 19 5 12 12 5"></polyline>
+                  </svg>
+                  <span>Can Receive Red Blood Cells From:</span>
+                </div>
+                <div class="bg-compat-chips">
+                  <span class="compat-chip receive">A-</span>
+                  <span class="compat-chip receive">O-</span>
+                </div>
+              </div>
+              <div class="bg-card-action">
+                <button class="btn btn-outline btn-sm btn-full btn-find-by-group" data-group="A-">
+                  Find A- Donors →
+                </button>
+              </div>
+            </div>
+
+            <!-- 3. B+ Card -->
+            <div class="blood-group-card">
+              <div class="bg-card-header">
+                <div class="bg-symbol-circle">
+                  <span>B+</span>
+                </div>
+                <div class="bg-header-meta">
+                  <span class="bg-group-title">Blood Group: B+</span>
+                  <span class="donor-type-badge type-compatible">Compatible Donor</span>
+                </div>
+              </div>
+              <p class="bg-card-summary">
+                B+ red blood cells can be transfused to B+ and AB+ individuals. Essential for trauma and surgical departments.
+              </p>
+              <div class="bg-compat-block donate">
+                <div class="bg-compat-label">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                    <polyline points="12 5 19 12 12 19"></polyline>
+                  </svg>
+                  <span>Can Donate Red Blood Cells To:</span>
+                </div>
+                <div class="bg-compat-chips">
+                  <span class="compat-chip donate">B+</span>
+                  <span class="compat-chip donate">AB+</span>
+                </div>
+              </div>
+              <div class="bg-compat-block receive">
+                <div class="bg-compat-label">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <line x1="19" y1="12" x2="5" y2="12"></line>
+                    <polyline points="12 19 5 12 12 5"></polyline>
+                  </svg>
+                  <span>Can Receive Red Blood Cells From:</span>
+                </div>
+                <div class="bg-compat-chips">
+                  <span class="compat-chip receive">B+</span>
+                  <span class="compat-chip receive">B-</span>
+                  <span class="compat-chip receive">O+</span>
+                  <span class="compat-chip receive">O-</span>
+                </div>
+              </div>
+              <div class="bg-card-action">
+                <button class="btn btn-outline btn-sm btn-full btn-find-by-group" data-group="B+">
+                  Find B+ Donors →
+                </button>
+              </div>
+            </div>
+
+            <!-- 4. B- Card -->
+            <div class="blood-group-card">
+              <div class="bg-card-header">
+                <div class="bg-symbol-circle">
+                  <span>B-</span>
+                </div>
+                <div class="bg-header-meta">
+                  <span class="bg-group-title">Blood Group: B-</span>
+                  <span class="donor-type-badge type-compatible">Compatible Donor</span>
+                </div>
+              </div>
+              <p class="bg-card-summary">
+                B- is a rare and essential blood type. Can safely donate red blood cells to B and AB patients of both Rh factors.
+              </p>
+              <div class="bg-compat-block donate">
+                <div class="bg-compat-label">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                    <polyline points="12 5 19 12 12 19"></polyline>
+                  </svg>
+                  <span>Can Donate Red Blood Cells To:</span>
+                </div>
+                <div class="bg-compat-chips">
+                  <span class="compat-chip donate">B-</span>
+                  <span class="compat-chip donate">B+</span>
+                  <span class="compat-chip donate">AB-</span>
+                  <span class="compat-chip donate">AB+</span>
+                </div>
+              </div>
+              <div class="bg-compat-block receive">
+                <div class="bg-compat-label">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <line x1="19" y1="12" x2="5" y2="12"></line>
+                    <polyline points="12 19 5 12 12 5"></polyline>
+                  </svg>
+                  <span>Can Receive Red Blood Cells From:</span>
+                </div>
+                <div class="bg-compat-chips">
+                  <span class="compat-chip receive">B-</span>
+                  <span class="compat-chip receive">O-</span>
+                </div>
+              </div>
+              <div class="bg-card-action">
+                <button class="btn btn-outline btn-sm btn-full btn-find-by-group" data-group="B-">
+                  Find B- Donors →
+                </button>
+              </div>
+            </div>
+
+            <!-- 5. AB+ Card (Universal Red Cell Recipient) -->
+            <div class="blood-group-card highlight-recipient">
+              <div class="bg-card-header">
+                <div class="bg-symbol-circle bg-recipient-circle">
+                  <span>AB+</span>
+                </div>
+                <div class="bg-header-meta">
+                  <span class="bg-group-title">Blood Group: AB+</span>
+                  <span class="donor-type-badge type-universal-recipient">Universal Red Cell Recipient</span>
+                </div>
+              </div>
+              <p class="bg-card-summary">
+                <strong>Universal Red Cell Recipient:</strong> Can receive red blood cells from all 8 blood groups in emergencies. (Refers strictly to red blood cells).
+              </p>
+              <div class="bg-compat-block donate">
+                <div class="bg-compat-label">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                    <polyline points="12 5 19 12 12 19"></polyline>
+                  </svg>
+                  <span>Can Donate Red Blood Cells To:</span>
+                </div>
+                <div class="bg-compat-chips">
+                  <span class="compat-chip donate">AB+</span>
+                </div>
+              </div>
+              <div class="bg-compat-block receive">
+                <div class="bg-compat-label">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <line x1="19" y1="12" x2="5" y2="12"></line>
+                    <polyline points="12 19 5 12 12 5"></polyline>
+                  </svg>
+                  <span>Can Receive Red Blood Cells From:</span>
+                </div>
+                <div class="bg-compat-chips">
+                  <span class="compat-chip receive">O-</span>
+                  <span class="compat-chip receive">O+</span>
+                  <span class="compat-chip receive">A-</span>
+                  <span class="compat-chip receive">A+</span>
+                  <span class="compat-chip receive">B-</span>
+                  <span class="compat-chip receive">B+</span>
+                  <span class="compat-chip receive">AB-</span>
+                  <span class="compat-chip receive">AB+</span>
+                </div>
+              </div>
+              <div class="bg-card-action">
+                <button class="btn btn-outline btn-sm btn-full btn-find-by-group" data-group="AB+">
+                  Find AB+ Donors →
+                </button>
+              </div>
+            </div>
+
+            <!-- 6. AB- Card -->
+            <div class="blood-group-card">
+              <div class="bg-card-header">
+                <div class="bg-symbol-circle">
+                  <span>AB-</span>
+                </div>
+                <div class="bg-header-meta">
+                  <span class="bg-group-title">Blood Group: AB-</span>
+                  <span class="donor-type-badge type-recipient">Compatible Recipient</span>
+                </div>
+              </div>
+              <p class="bg-card-summary">
+                Among the rarest blood types (less than 1%). AB- individuals can receive red cells from any Rh-negative donor.
+              </p>
+              <div class="bg-compat-block donate">
+                <div class="bg-compat-label">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                    <polyline points="12 5 19 12 12 19"></polyline>
+                  </svg>
+                  <span>Can Donate Red Blood Cells To:</span>
+                </div>
+                <div class="bg-compat-chips">
+                  <span class="compat-chip donate">AB-</span>
+                  <span class="compat-chip donate">AB+</span>
+                </div>
+              </div>
+              <div class="bg-compat-block receive">
+                <div class="bg-compat-label">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <line x1="19" y1="12" x2="5" y2="12"></line>
+                    <polyline points="12 19 5 12 12 5"></polyline>
+                  </svg>
+                  <span>Can Receive Red Blood Cells From:</span>
+                </div>
+                <div class="bg-compat-chips">
+                  <span class="compat-chip receive">AB-</span>
+                  <span class="compat-chip receive">A-</span>
+                  <span class="compat-chip receive">B-</span>
+                  <span class="compat-chip receive">O-</span>
+                </div>
+              </div>
+              <div class="bg-card-action">
+                <button class="btn btn-outline btn-sm btn-full btn-find-by-group" data-group="AB-">
+                  Find AB- Donors →
+                </button>
+              </div>
+            </div>
+
+            <!-- 7. O+ Card -->
+            <div class="blood-group-card">
+              <div class="bg-card-header">
+                <div class="bg-symbol-circle">
+                  <span>O+</span>
+                </div>
+                <div class="bg-header-meta">
+                  <span class="bg-group-title">Blood Group: O+</span>
+                  <span class="donor-type-badge type-compatible">Compatible Donor</span>
+                </div>
+              </div>
+              <p class="bg-card-summary">
+                The most frequently needed blood group. O+ red blood cells can be transfused to any positive blood group.
+              </p>
+              <div class="bg-compat-block donate">
+                <div class="bg-compat-label">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                    <polyline points="12 5 19 12 12 19"></polyline>
+                  </svg>
+                  <span>Can Donate Red Blood Cells To:</span>
+                </div>
+                <div class="bg-compat-chips">
+                  <span class="compat-chip donate">O+</span>
+                  <span class="compat-chip donate">A+</span>
+                  <span class="compat-chip donate">B+</span>
+                  <span class="compat-chip donate">AB+</span>
+                </div>
+              </div>
+              <div class="bg-compat-block receive">
+                <div class="bg-compat-label">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <line x1="19" y1="12" x2="5" y2="12"></line>
+                    <polyline points="12 19 5 12 12 5"></polyline>
+                  </svg>
+                  <span>Can Receive Red Blood Cells From:</span>
+                </div>
+                <div class="bg-compat-chips">
+                  <span class="compat-chip receive">O+</span>
+                  <span class="compat-chip receive">O-</span>
+                </div>
+              </div>
+              <div class="bg-card-action">
+                <button class="btn btn-outline btn-sm btn-full btn-find-by-group" data-group="O+">
+                  Find O+ Donors →
+                </button>
+              </div>
+            </div>
+
+            <!-- 8. O- Card (Universal Red Cell Donor) -->
+            <div class="blood-group-card highlight-donor">
+              <div class="bg-card-header">
+                <div class="bg-symbol-circle bg-donor-circle">
+                  <span>O-</span>
+                </div>
+                <div class="bg-header-meta">
+                  <span class="bg-group-title">Blood Group: O-</span>
+                  <span class="donor-type-badge type-universal-donor">Universal Red Cell Donor</span>
+                </div>
+              </div>
+              <p class="bg-card-summary">
+                <strong>Universal Red Cell Donor:</strong> Red cells have no A, B, or Rh antigens and can be given to all blood types in emergencies. (Refers strictly to red blood cells).
+              </p>
+              <div class="bg-compat-block donate">
+                <div class="bg-compat-label">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                    <polyline points="12 5 19 12 12 19"></polyline>
+                  </svg>
+                  <span>Can Donate Red Blood Cells To:</span>
+                </div>
+                <div class="bg-compat-chips">
+                  <span class="compat-chip donate">O-</span>
+                  <span class="compat-chip donate">O+</span>
+                  <span class="compat-chip donate">A-</span>
+                  <span class="compat-chip donate">A+</span>
+                  <span class="compat-chip donate">B-</span>
+                  <span class="compat-chip donate">B+</span>
+                  <span class="compat-chip donate">AB-</span>
+                  <span class="compat-chip donate">AB+</span>
+                </div>
+              </div>
+              <div class="bg-compat-block receive">
+                <div class="bg-compat-label">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <line x1="19" y1="12" x2="5" y2="12"></line>
+                    <polyline points="12 19 5 12 12 5"></polyline>
+                  </svg>
+                  <span>Can Receive Red Blood Cells From:</span>
+                </div>
+                <div class="bg-compat-chips">
+                  <span class="compat-chip receive">O-</span>
+                </div>
+              </div>
+              <div class="bg-card-action">
+                <button class="btn btn-outline btn-sm btn-full btn-find-by-group" data-group="O-">
+                  Find O- Donors →
+                </button>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Interactive Single-Group Checker Tool for Fast Cross-Reference -->
+          <div class="compat-tool-card" style="margin-top: 3.5rem;">
             <div class="compat-tool-header">
-              <h3>Interactive Compatibility Checker</h3>
+              <h3>Interactive Red Cell Transfusion Checker</h3>
               <p style="color: var(--text-muted); font-size: 0.9375rem;">
-                Select your blood type to instantly see who you can donate to and who you can safely receive blood from.
+                Select any blood type to test instant real-time compatibility for hospital emergency scenarios.
               </p>
             </div>
 
             <!-- Selector Chips -->
             <div class="compat-selector-chips" id="compatSelectorChips">
-              <button class="compat-btn-chip active" data-type="O-">O- (Universal Donor)</button>
-              <button class="compat-btn-chip" data-type="O+">O+</button>
-              <button class="compat-btn-chip" data-type="A-">A-</button>
               <button class="compat-btn-chip" data-type="A+">A+</button>
-              <button class="compat-btn-chip" data-type="B-">B-</button>
+              <button class="compat-btn-chip" data-type="A-">A-</button>
               <button class="compat-btn-chip" data-type="B+">B+</button>
-              <button class="compat-btn-chip" data-type="AB-">AB-</button>
+              <button class="compat-btn-chip" data-type="B-">B-</button>
               <button class="compat-btn-chip" data-type="AB+">AB+ (Universal Recipient)</button>
+              <button class="compat-btn-chip" data-type="AB-">AB-</button>
+              <button class="compat-btn-chip" data-type="O+">O+</button>
+              <button class="compat-btn-chip active" data-type="O-">O- (Universal Donor)</button>
             </div>
 
             <!-- Dynamic Result Display -->
@@ -664,7 +1082,7 @@
                     <line x1="5" y1="12" x2="19" y2="12"></line>
                     <polyline points="12 5 19 12 12 19"></polyline>
                   </svg>
-                  <span>You Can Safely Donate To</span>
+                  <span>You Can Safely Donate Red Cells To</span>
                 </div>
                 <div class="compat-badge-group" id="compatDonateBadges">
                   <!-- Badges inserted via JS -->
@@ -677,7 +1095,7 @@
                     <line x1="19" y1="12" x2="5" y2="12"></line>
                     <polyline points="12 19 5 12 12 5"></polyline>
                   </svg>
-                  <span>You Can Safely Receive From</span>
+                  <span>You Can Safely Receive Red Cells From</span>
                 </div>
                 <div class="compat-badge-group" id="compatReceiveBadges">
                   <!-- Badges inserted via JS -->
@@ -690,70 +1108,6 @@
             </div>
           </div>
 
-          <!-- Comprehensive Reference Matrix -->
-          <div class="matrix-card">
-            <h3 style="margin-bottom: 1.25rem; font-size: 1.25rem;">Complete Compatibility Matrix</h3>
-            <table class="matrix-table">
-              <thead>
-                <tr>
-                  <th>Blood Type</th>
-                  <th>Can Donate To</th>
-                  <th>Can Receive From</th>
-                  <th>Classification</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td><strong>O-</strong></td>
-                  <td>Everyone (Universal Donor)</td>
-                  <td>O- only</td>
-                  <td><span class="matrix-badge">Universal Donor</span></td>
-                </tr>
-                <tr>
-                  <td><strong>O+</strong></td>
-                  <td>O+, A+, B+, AB+</td>
-                  <td>O+, O-</td>
-                  <td>Most Common</td>
-                </tr>
-                <tr>
-                  <td><strong>A-</strong></td>
-                  <td>A-, A+, AB-, AB+</td>
-                  <td>A-, O-</td>
-                  <td>Critical Demand</td>
-                </tr>
-                <tr>
-                  <td><strong>A+</strong></td>
-                  <td>A+, AB+</td>
-                  <td>A+, A-, O+, O-</td>
-                  <td>High Demand</td>
-                </tr>
-                <tr>
-                  <td><strong>B-</strong></td>
-                  <td>B-, B+, AB-, AB+</td>
-                  <td>B-, O-</td>
-                  <td>Rare Blood</td>
-                </tr>
-                <tr>
-                  <td><strong>B+</strong></td>
-                  <td>B+, AB+</td>
-                  <td>B+, B-, O+, O-</td>
-                  <td>Common</td>
-                </tr>
-                <tr>
-                  <td><strong>AB-</strong></td>
-                  <td>AB-, AB+</td>
-                  <td>AB-, A-, B-, O-</td>
-                  <td>Rarest Type</td>
-                </tr>
-                <tr>
-                  <td><strong>AB+</strong></td>
-                  <td>AB+ only</td>
-                  <td>Everyone (Universal Recipient)</td>
-                  <td><span class="matrix-badge">Universal Recipient</span></td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
         </div>
       </section>
     </div>
@@ -1260,8 +1614,8 @@
             <li><a href="#home" data-nav="home">Home</a></li>
             <li><a href="#find-donor" data-nav="find-donor">Find a Donor</a></li>
             <li><a href="#blood-requests" data-nav="blood-requests">Blood Requests</a></li>
+            <li><a href="#blood-groups" data-nav="blood-groups">Blood Groups</a></li>
             <li><a href="#how-it-works" data-nav="how-it-works">How It Works</a></li>
-            <li><a href="#compatibility" data-nav="compatibility">Compatibility Guide</a></li>
           </ul>
         </div>
 

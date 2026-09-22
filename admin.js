@@ -4,7 +4,7 @@
  * Developed by Noeline Gaikwad
  */
 
-import { SUPABASE_CONFIG } from './config.js';
+import { SUPABASE_CONFIG, initSupabaseClient, getSupabase, getSupabaseAsync } from './config.js';
 
 let supabase = null;
 let currentAdminProfile = null;
@@ -12,19 +12,35 @@ let allRequests = [];
 let allDonors = [];
 let allResponses = [];
 
-document.addEventListener('DOMContentLoaded', async () => {
-  initSupabase();
-  setupAdminListeners();
-  await verifyAdminAccess();
-});
+function bootAdmin() {
+  try {
+    initSupabase();
+  } catch (e) {
+    console.warn('Admin Supabase init error:', e);
+  }
+
+  try {
+    setupAdminListeners();
+  } catch (e) {
+    console.error('setupAdminListeners error:', e);
+  }
+
+  verifyAdminAccess().catch(err => console.warn('verifyAdminAccess warning:', err));
+}
+
+if (typeof document !== 'undefined') {
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bootAdmin);
+  } else {
+    bootAdmin();
+  }
+}
 
 function initSupabase() {
-  if (window.supabase && typeof window.supabase.createClient === 'function') {
-    try {
-      supabase = window.supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey);
-    } catch (e) {
-      console.warn('Admin Supabase init fallback:', e);
-    }
+  try {
+    supabase = getSupabase() || initSupabaseClient();
+  } catch (e) {
+    console.warn('Admin Supabase init fallback:', e);
   }
 }
 
@@ -41,6 +57,13 @@ async function verifyAdminAccess() {
   let isAdmin = false;
 
   try {
+    if (!supabase) {
+      supabase = getSupabase();
+      if (!supabase && typeof getSupabaseAsync === 'function') {
+        supabase = await getSupabaseAsync();
+      }
+    }
+
     if (supabase) {
       const { data: { session } } = await supabase.auth.getSession();
       if (session && session.user) {
@@ -508,18 +531,53 @@ function populateDonorSelect() {
 // Setup Listeners
 // ============================================================================
 function setupAdminListeners() {
-  // Tabs Navigation
-  document.querySelectorAll('#adminMainTabs .admin-tab').forEach(tab => {
-    tab.addEventListener('click', () => {
-      document.querySelectorAll('#adminMainTabs .admin-tab').forEach(t => t.classList.remove('active'));
-      tab.classList.add('active');
+  // Global click delegation for admin
+  document.addEventListener('click', (e) => {
+    const target = e.target;
+    if (!target || !(target instanceof Element)) return;
 
-      const target = tab.dataset.tab;
-      document.getElementById('contentPending').style.display = target === 'pending' ? 'block' : 'none';
-      document.getElementById('contentAllRequests').style.display = target === 'allRequests' ? 'block' : 'none';
-      document.getElementById('contentDonors').style.display = target === 'donors' ? 'block' : 'none';
-      document.getElementById('contentResponses').style.display = target === 'responses' ? 'block' : 'none';
-    });
+    // Close button
+    const closeBtn = target.closest('[data-close]');
+    if (closeBtn) {
+      e.preventDefault();
+      closeAdminModal(closeBtn.dataset.close);
+      return;
+    }
+
+    // Modal overlay click
+    if (target.classList.contains('modal-overlay')) {
+      closeAdminModal(target.id);
+      return;
+    }
+
+    // Admin Tabs
+    const adminTab = target.closest('#adminMainTabs .admin-tab');
+    if (adminTab) {
+      e.preventDefault();
+      document.querySelectorAll('#adminMainTabs .admin-tab').forEach(t => t.classList.remove('active'));
+      adminTab.classList.add('active');
+
+      const tabTarget = adminTab.dataset.tab;
+      const cPending = document.getElementById('contentPending');
+      const cAllReq = document.getElementById('contentAllRequests');
+      const cDonors = document.getElementById('contentDonors');
+      const cResp = document.getElementById('contentResponses');
+
+      if (cPending) cPending.style.display = tabTarget === 'pending' ? 'block' : 'none';
+      if (cAllReq) cAllReq.style.display = tabTarget === 'allRequests' ? 'block' : 'none';
+      if (cDonors) cDonors.style.display = tabTarget === 'donors' ? 'block' : 'none';
+      if (cResp) cResp.style.display = tabTarget === 'responses' ? 'block' : 'none';
+      return;
+    }
+
+    // Fulfill request button in responses
+    const fulfillBtn = target.closest('.btn-mark-fulfilled');
+    if (fulfillBtn) {
+      e.preventDefault();
+      const reqId = fulfillBtn.dataset.reqId;
+      if (reqId) updateRequestStatus(reqId, 'fulfilled');
+      return;
+    }
   });
 
   // Filter Status in All Requests tab
@@ -624,15 +682,11 @@ function setupAdminListeners() {
     }
   });
 
-  // Modal Generic Handlers
-  document.querySelectorAll('[data-close]').forEach(btn => {
-    btn.addEventListener('click', () => closeAdminModal(btn.dataset.close));
-  });
-
-  document.querySelectorAll('.modal-overlay').forEach(modal => {
-    modal.addEventListener('click', (e) => {
-      if (e.target === modal) closeAdminModal(modal.id);
-    });
+  // Keyboard Escape to close modals
+  document.addEventListener('keydown', (e) => {
+    if (e && e.key === 'Escape') {
+      document.querySelectorAll('.modal-overlay.active').forEach(m => closeAdminModal(m.id));
+    }
   });
 }
 
@@ -640,6 +694,7 @@ function openAdminModal(id) {
   const modal = document.getElementById(id);
   if (modal) {
     modal.classList.add('active');
+    modal.style.display = 'flex';
     document.body.style.overflow = 'hidden';
   }
 }
@@ -648,6 +703,7 @@ function closeAdminModal(id) {
   const modal = document.getElementById(id);
   if (modal) {
     modal.classList.remove('active');
+    modal.style.display = 'none';
     document.body.style.overflow = '';
   }
 }

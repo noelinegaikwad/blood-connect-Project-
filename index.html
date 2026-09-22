@@ -12,6 +12,16 @@
   <!-- Design System & Styles -->
   <link rel="stylesheet" href="style.css">
 
+  <!-- Native Browser Import Map for GitHub Pages & Static Hosts -->
+  <script type="importmap">
+  {
+    "imports": {
+      "@supabase/supabase-js": "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm",
+      "canvas-confetti": "https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/+esm"
+    }
+  }
+  </script>
+
   <!-- Supabase Official Client JS -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <!-- Canvas Confetti for Lifesaving Response Animations -->
@@ -613,6 +623,9 @@
           <button class="auth-tab-btn" id="tabSignupBtn">Become a Donor</button>
         </div>
 
+        <!-- Auth Alert / Notification Box -->
+        <div class="auth-alert-box" id="authAlertBox"></div>
+
         <!-- Login Form -->
         <form id="loginForm">
           <div class="form-group" style="margin-bottom: 1rem;">
@@ -685,6 +698,21 @@
             Already have an account? <a href="#" id="linkSwitchToLogin" style="color: var(--primary); font-weight: 600;">Sign in here</a>
           </p>
         </form>
+
+        <!-- Quick Demo / Testing Shortcut -->
+        <div style="margin-top: 1.25rem; padding-top: 1rem; border-top: 1px dashed var(--border-light); text-align: center;">
+          <span style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 0.5rem;">
+            ⚡ Quick Evaluation Sign-In (Instant Access)
+          </span>
+          <div style="display: flex; gap: 0.5rem; justify-content: center;">
+            <button type="button" class="btn btn-secondary btn-sm" id="btnQuickDemoDonor">
+              👤 Sign In as Demo Donor
+            </button>
+            <button type="button" class="btn btn-secondary btn-sm" id="btnQuickDemoAdmin">
+              🛡️ Sign In as Admin
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -955,8 +983,7 @@
     </div>
   </footer>
 
-  <!-- Scripts -->
-  <script type="module" src="config.js"></script>
-  <script type="module" src="app.js"></script>
+  <!-- Application Scripts -->
+  <script type="module" src="./app.js"></script>
 </body>
 </html>

@@ -4,8 +4,7 @@
  * Developed by Noeline Gaikwad
  */
 
-import { SUPABASE_CONFIG, isSupabaseConfigured, saveSupabaseConfig, resetSupabaseConfig } from './config.js';
-import confetti from 'canvas-confetti';
+import { SUPABASE_CONFIG, isSupabaseConfigured, saveSupabaseConfig, resetSupabaseConfig, initSupabaseClient, getSupabase, getSupabaseAsync } from './config.js';
 
 // ============================================================================
 // Global State & Fallback Seed Data (Ensures smooth evaluation & resilient offline mode)
@@ -178,23 +177,43 @@ function setLocalFallback(key, value) {
 // ============================================================================
 // Application Bootstrapping
 // ============================================================================
-document.addEventListener('DOMContentLoaded', async () => {
-  initSupabase();
-  setupUIEventListeners();
-  await checkAuthSession();
-  await loadStatistics();
-  await loadDonors();
-  await loadBloodRequests();
-});
+function bootApp() {
+  try {
+    initSupabase();
+  } catch (e) {
+    console.warn('initSupabase warning:', e);
+  }
+
+  try {
+    setupUIEventListeners();
+  } catch (e) {
+    console.error('setupUIEventListeners error:', e);
+  }
+
+  // Load backend data without blocking user interactions
+  checkAuthSession().catch(e => console.warn('checkAuthSession warn:', e));
+  loadStatistics().catch(e => console.warn('loadStatistics warn:', e));
+  loadDonors().catch(e => console.warn('loadDonors warn:', e));
+  loadBloodRequests().catch(e => console.warn('loadBloodRequests warn:', e));
+}
+
+if (typeof document !== 'undefined') {
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bootApp);
+  } else {
+    // DOM is already parsed (interactive or complete), bootstrap immediately!
+    bootApp();
+  }
+}
 
 function initSupabase() {
-  if (window.supabase && typeof window.supabase.createClient === 'function') {
-    try {
-      supabase = window.supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey);
+  try {
+    supabase = getSupabase() || initSupabaseClient();
+    if (supabase) {
       console.log('✓ Supabase Client Ready.');
-    } catch (e) {
-      console.warn('Supabase initialization fallback:', e.message);
     }
+  } catch (e) {
+    console.warn('Supabase initialization fallback:', e.message);
   }
 }
 
@@ -203,6 +222,13 @@ function initSupabase() {
 // ============================================================================
 async function checkAuthSession() {
   try {
+    if (!supabase) {
+      supabase = getSupabase();
+      if (!supabase && typeof getSupabaseAsync === 'function') {
+        supabase = await getSupabaseAsync();
+      }
+    }
+
     // Check if real Supabase session is active
     if (supabase) {
       const { data: { session }, error } = await supabase.auth.getSession();
@@ -218,17 +244,19 @@ async function checkAuthSession() {
         if (session && session.user) {
           currentUser = session.user;
           await fetchUserProfile(session.user.id);
-        } else {
+          renderNavUser();
+        } else if (event === 'SIGNED_OUT') {
           currentUser = null;
           currentProfile = null;
+          localStorage.removeItem('bloodconnect_active_session');
+          renderNavUser();
         }
-        renderNavUser();
       });
     }
 
     // Fallback active session check from local storage (for testing & offline demo)
     const localSession = getLocalFallback('active_session', null);
-    if (localSession) {
+    if (localSession && !currentUser) {
       currentUser = localSession.user;
       currentProfile = localSession.profile;
     }
@@ -808,7 +836,7 @@ function triggerDonorHelpConfetti(targetElement) {
     originY = Math.min(Math.max((rect.top + rect.height / 3) / window.innerHeight, 0.1), 0.9);
   }
 
-  const confettiFn = (typeof confetti === 'function' ? confetti : null) || (typeof window !== 'undefined' && window.confetti ? window.confetti : null);
+  const confettiFn = typeof window !== 'undefined' && typeof window.confetti === 'function' ? window.confetti : null;
 
   if (confettiFn) {
     // 1. Initial localized heart-colored burst from card location
@@ -963,19 +991,117 @@ async function handleBloodRequestSubmit(e) {
 }
 
 // ============================================================================
+// Authentication: Alerts & Quick Demo Login
+// ============================================================================
+function showAuthAlert(html, type = 'error') {
+  const box = document.getElementById('authAlertBox');
+  if (!box) return;
+  box.className = `auth-alert-box ${type}`;
+  box.innerHTML = html;
+  box.style.display = 'block';
+}
+
+function hideAuthAlert() {
+  const box = document.getElementById('authAlertBox');
+  if (box) {
+    box.style.display = 'none';
+    box.innerHTML = '';
+  }
+}
+
+function switchAuthTab(tab = 'login') {
+  hideAuthAlert();
+  const tabLogin = document.getElementById('tabLoginBtn');
+  const tabSignup = document.getElementById('tabSignupBtn');
+  const loginForm = document.getElementById('loginForm');
+  const signupForm = document.getElementById('signupForm');
+  const modalTitle = document.getElementById('authModalTitle');
+
+  if (tab === 'signup') {
+    tabSignup?.classList.add('active');
+    tabLogin?.classList.remove('active');
+    if (loginForm) loginForm.style.display = 'none';
+    if (signupForm) signupForm.style.display = 'block';
+    if (modalTitle) modalTitle.textContent = 'Register as a Voluntary Donor';
+  } else {
+    tabLogin?.classList.add('active');
+    tabSignup?.classList.remove('active');
+    if (loginForm) loginForm.style.display = 'block';
+    if (signupForm) signupForm.style.display = 'none';
+    if (modalTitle) modalTitle.textContent = 'Welcome to BloodConnect';
+  }
+}
+
+function quickDemoLogin(role = 'donor') {
+  const demoProfile = role === 'admin' ? {
+    id: 'demo-admin-noeline',
+    full_name: 'Noeline Gaikwad (Admin)',
+    email: 'admin@bloodconnect.org',
+    phone: '+91 98000 00001',
+    blood_group: 'O+',
+    location: 'Pune Headquarters',
+    role: 'admin',
+    is_available: true,
+    created_at: '2026-01-01',
+  } : {
+    id: 'demo-u1',
+    full_name: 'Dr. Aarav Mehta',
+    email: 'aarav.mehta@hospital.org',
+    phone: '+91 98230 11223',
+    blood_group: 'O+',
+    location: 'Central Pune, MH',
+    role: 'donor',
+    is_available: true,
+    created_at: '2026-01-10',
+  };
+
+  currentUser = { id: demoProfile.id, email: demoProfile.email };
+  currentProfile = demoProfile;
+  setLocalFallback('active_session', { user: currentUser, profile: currentProfile });
+
+  const profiles = getLocalFallback('profiles', DEMO_PROFILES);
+  if (!profiles.some(p => p.id === demoProfile.id)) {
+    profiles.unshift(demoProfile);
+    setLocalFallback('profiles', profiles);
+  }
+
+  showToast(`Signed in as ${demoProfile.full_name} (${role})`, 'success');
+  closeModal('authModal');
+  renderNavUser();
+  loadDonors();
+  loadBloodRequests();
+}
+
+// ============================================================================
 // Authentication: Login & Signup Handlers
 // ============================================================================
 async function handleAuthLogin(e) {
   e.preventDefault();
-  const email = document.getElementById('loginEmail').value.trim();
-  const password = document.getElementById('loginPassword').value;
+  const emailInput = document.getElementById('loginEmail');
+  const passwordInput = document.getElementById('loginPassword');
   const btn = document.getElementById('btnLoginSubmit');
+
+  if (!emailInput || !passwordInput || !btn) return;
+
+  const email = emailInput.value.trim();
+  const password = passwordInput.value;
+
+  if (!email || !password) {
+    showToast('Please enter both email and password.', 'warning');
+    return;
+  }
 
   btn.disabled = true;
   btn.textContent = 'Signing in...';
+  hideAuthAlert();
 
   try {
-    let authenticated = false;
+    if (!supabase) {
+      supabase = getSupabase();
+      if (!supabase && typeof getSupabaseAsync === 'function') {
+        supabase = await getSupabaseAsync();
+      }
+    }
 
     if (supabase) {
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -983,19 +1109,59 @@ async function handleAuthLogin(e) {
         password,
       });
 
-      if (!error && data.user) {
+      if (error) {
+        console.warn('Supabase signInWithPassword error:', error);
+
+        if (error.code === 'email_not_confirmed' || error.message.toLowerCase().includes('email not confirmed')) {
+          showAuthAlert(
+            `<strong>📧 Email Confirmation Pending:</strong><br>
+            A confirmation link was sent to <strong>${escapeHtml(email)}</strong> when registering.<br><br>
+            • Please check your inbox (and spam folder) and click the confirmation link.<br>
+            • <em>Fast Tip:</em> In your Supabase Dashboard under <strong>Authentication &gt; Providers &gt; Email</strong>, toggle <strong>OFF "Confirm email"</strong> to allow immediate logins.`,
+            'warning'
+          );
+          showToast('Please confirm your email before signing in.', 'warning');
+          return;
+        }
+
+        if (error.code === 'invalid_credentials' || error.message.toLowerCase().includes('invalid login credentials')) {
+          showAuthAlert(
+            `<strong>❌ Account Not Found or Incorrect Password:</strong><br>
+            No account matched this email and password in your Supabase database.<br><br>
+            • First time here? Click below to create your account:<br>
+            <button type="button" class="btn btn-outline btn-sm" id="alertGoToSignup" style="margin-top: 0.5rem;">
+              👉 Register as a New Donor
+            </button>`,
+            'error'
+          );
+          document.getElementById('alertGoToSignup')?.addEventListener('click', () => {
+            switchAuthTab('signup');
+          });
+          showToast('Invalid credentials. Have you registered an account yet?', 'error');
+          return;
+        }
+
+        showAuthAlert(`<strong>Login Failed:</strong> ${escapeHtml(error.message)}`, 'error');
+        showToast(error.message, 'error');
+        return;
+      }
+
+      if (data && data.user) {
         currentUser = data.user;
         await fetchUserProfile(data.user.id);
-        authenticated = true;
+        showToast('Welcome back to BloodConnect!', 'success');
+        closeModal('authModal');
+        document.getElementById('loginForm').reset();
+        renderNavUser();
+        await loadDonors();
+        await loadBloodRequests();
+        return;
       }
-    }
-
-    // Fallback authentication (supports instant evaluation)
-    if (!authenticated) {
+    } else {
+      // Local fallback if Supabase client not initialized
       const profiles = getLocalFallback('profiles', DEMO_PROFILES);
       let match = profiles.find(p => p.email.toLowerCase() === email.toLowerCase());
 
-      // If logging in with demo credentials or any email for test
       if (!match) {
         match = {
           id: 'usr-' + Date.now(),
@@ -1015,17 +1181,16 @@ async function handleAuthLogin(e) {
       currentUser = { id: match.id, email: match.email };
       currentProfile = match;
       setLocalFallback('active_session', { user: currentUser, profile: currentProfile });
-      authenticated = true;
+      showToast('Welcome back!', 'success');
+      closeModal('authModal');
+      document.getElementById('loginForm').reset();
+      renderNavUser();
+      await loadDonors();
+      await loadBloodRequests();
     }
-
-    showToast('Welcome back!', 'success');
-    closeModal('authModal');
-    document.getElementById('loginForm').reset();
-    renderNavUser();
-    await loadDonors();
-    await loadBloodRequests();
   } catch (err) {
     console.error('Login error:', err);
+    showAuthAlert(`<strong>System Error:</strong> ${escapeHtml(err.message || 'Could not complete sign in.')}`, 'error');
     showToast('Something went wrong. Please check your credentials.', 'error');
   } finally {
     btn.disabled = false;
@@ -1045,15 +1210,23 @@ async function handleAuthSignup(e) {
 
   btn.disabled = true;
   btn.textContent = 'Creating Profile...';
+  hideAuthAlert();
 
   try {
-    let signedUp = false;
+    if (!supabase) {
+      supabase = getSupabase();
+      if (!supabase && typeof getSupabaseAsync === 'function') {
+        supabase = await getSupabaseAsync();
+      }
+    }
 
     if (supabase) {
+      const redirectUrl = window.location.origin + window.location.pathname;
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
+          emailRedirectTo: redirectUrl,
           data: {
             full_name: fullName,
             phone,
@@ -1064,27 +1237,44 @@ async function handleAuthSignup(e) {
         },
       });
 
-      if (!error && data.user) {
-        // Explicit profile creation to ensure RLS compliance
-        await supabase.from('profiles').upsert({
-          id: data.user.id,
-          full_name: fullName,
-          email: email,
-          phone: phone,
-          blood_group: bloodGroup,
-          location: location,
-          role: 'donor',
-          is_available: true,
-        });
+      if (error) {
+        console.error('Supabase signUp error:', error);
+        showAuthAlert(`<strong>Registration Failed:</strong> ${escapeHtml(error.message)}`, 'error');
+        showToast(error.message, 'error');
+        return;
+      }
 
+      if (data && data.user) {
+        // If Supabase requires email confirmation, session will be null
+        if (!data.session) {
+          showAuthAlert(
+            `<strong>🎉 Registration Successful!</strong><br>
+            A confirmation link was dispatched to <strong>${escapeHtml(email)}</strong>.<br><br>
+            1. Open your inbox and click the verification link.<br>
+            2. Once verified, return here to sign in with your password.<br><br>
+            <span style="font-size:0.8125rem; color:var(--text-muted);">
+            💡 To bypass email verification: In your Supabase Dashboard, go to <strong>Authentication &gt; Providers &gt; Email</strong> and toggle <strong>OFF "Confirm email"</strong>.
+            </span>`,
+            'info'
+          );
+          showToast('Account created! Please check your email to verify.', 'info');
+          document.getElementById('signupForm').reset();
+          return;
+        }
+
+        // Automatic session established
         currentUser = data.user;
         await fetchUserProfile(data.user.id);
-        signedUp = true;
+        showToast(`Welcome to BloodConnect, ${fullName}!`, 'success');
+        closeModal('authModal');
+        document.getElementById('signupForm').reset();
+        renderNavUser();
+        await loadDonors();
+        await loadStatistics();
+        return;
       }
-    }
-
-    // Fallback store
-    if (!signedUp) {
+    } else {
+      // Local fallback
       const newProfile = {
         id: 'usr-' + Date.now(),
         full_name: fullName,
@@ -1103,17 +1293,16 @@ async function handleAuthSignup(e) {
       currentUser = { id: newProfile.id, email: newProfile.email };
       currentProfile = newProfile;
       setLocalFallback('active_session', { user: currentUser, profile: currentProfile });
-      signedUp = true;
+      showToast('Account created successfully! Welcome to BloodConnect.', 'success');
+      closeModal('authModal');
+      document.getElementById('signupForm').reset();
+      renderNavUser();
+      await loadDonors();
+      await loadStatistics();
     }
-
-    showToast('Account created successfully! Welcome to BloodConnect.', 'success');
-    closeModal('authModal');
-    document.getElementById('signupForm').reset();
-    renderNavUser();
-    await loadDonors();
-    await loadStatistics();
   } catch (err) {
     console.error('Signup error:', err);
+    showAuthAlert(`<strong>Could not register account:</strong> ${escapeHtml(err.message)}`, 'error');
     showToast('Could not register account. Please check inputs.', 'error');
   } finally {
     btn.disabled = false;
@@ -1373,6 +1562,179 @@ async function handleLogDonationSubmit(e) {
 // Modal & UI Event Listeners
 // ============================================================================
 function setupUIEventListeners() {
+  // --------------------------------------------------------------------------
+  // 1. Delegated Global Click Dispatcher (Resilient & Immediate for ALL buttons)
+  // --------------------------------------------------------------------------
+  document.addEventListener('click', (e) => {
+    const target = e.target;
+    if (!target || !(target instanceof Element)) return;
+
+    // A. Modal Close Buttons (data-close="modalId" or .modal-close-btn)
+    const closeBtn = target.closest('[data-close]');
+    if (closeBtn) {
+      e.preventDefault();
+      closeModal(closeBtn.dataset.close);
+      return;
+    }
+
+    // B. Modal Backdrop Click
+    if (target.classList.contains('modal-overlay')) {
+      closeModal(target.id);
+      return;
+    }
+
+    // C. Sign In / Login triggers
+    if (target.closest('#navLoginBtn, #footerLoginLink, #linkSwitchToLogin')) {
+      e.preventDefault();
+      openAuthModal('login');
+      return;
+    }
+
+    // D. Register / Become Donor triggers
+    if (target.closest('#navSignupBtn, #tickerDonorBtn, #heroBecomeDonorBtn, #footerSignupLink, #linkSwitchToSignup')) {
+      e.preventDefault();
+      openAuthModal('signup');
+      return;
+    }
+
+    // E. Blood Request Triggers
+    if (target.closest('#heroRequestBloodBtn, #tickerRequestBtn, #btnOpenRequestBloodBottom, #footerRequestLink')) {
+      e.preventDefault();
+      openReqModal();
+      return;
+    }
+
+    // F. Auth Tabs
+    if (target.closest('#tabLoginBtn')) {
+      e.preventDefault();
+      switchAuthTab('login');
+      return;
+    }
+    if (target.closest('#tabSignupBtn')) {
+      e.preventDefault();
+      switchAuthTab('signup');
+      return;
+    }
+
+    // G. Quick Evaluation Demo Logins
+    if (target.closest('#btnQuickDemoDonor')) {
+      e.preventDefault();
+      quickDemoLogin('donor');
+      return;
+    }
+    if (target.closest('#btnQuickDemoAdmin')) {
+      e.preventDefault();
+      quickDemoLogin('admin');
+      return;
+    }
+
+    // H. Contact Donor in Donor Cards
+    const contactBtn = target.closest('.btn-contact-donor');
+    if (contactBtn) {
+      e.preventDefault();
+      openContactModal({
+        name: contactBtn.dataset.name,
+        group: contactBtn.dataset.group,
+        location: contactBtn.dataset.location,
+        phone: contactBtn.dataset.phone,
+        email: contactBtn.dataset.email,
+      });
+      return;
+    }
+
+    // I. "I Can Help" in Request Cards
+    const helpBtn = target.closest('.btn-help-request');
+    if (helpBtn) {
+      e.preventDefault();
+      handleHelpResponse(helpBtn.dataset.id, helpBtn.dataset.patient);
+      return;
+    }
+
+    // J. Log New Donation
+    if (target.closest('#btnLogNewDonation')) {
+      e.preventDefault();
+      const today = new Date().toISOString().split('T')[0];
+      const donDate = document.getElementById('donDate');
+      if (donDate) donDate.value = today;
+      openModal('donationModal');
+      return;
+    }
+
+    // K. Dashboard Modal Trigger
+    if (target.closest('#menuDashboardBtn')) {
+      e.preventDefault();
+      openDashboard();
+      return;
+    }
+
+    // L. User Logout
+    if (target.closest('#menuLogoutBtn')) {
+      e.preventDefault();
+      handleLogout();
+      return;
+    }
+
+    // M. Search Reset Buttons
+    if (target.closest('#btnResetSearch, #btnResetSearchFromEmpty')) {
+      e.preventDefault();
+      const sGroup = document.getElementById('searchBloodGroup');
+      const sLoc = document.getElementById('searchLocation');
+      if (sGroup) sGroup.value = '';
+      if (sLoc) sLoc.value = '';
+      document.querySelectorAll('.blood-chip').forEach(c => c.classList.remove('active'));
+      document.querySelector('.blood-chip[data-group=""]')?.classList.add('active');
+      loadDonors();
+      return;
+    }
+
+    // N. Blood Group Filter Chips
+    const bloodChip = target.closest('.blood-chip');
+    if (bloodChip) {
+      e.preventDefault();
+      document.querySelectorAll('.blood-chip').forEach(c => c.classList.remove('active'));
+      bloodChip.classList.add('active');
+      const group = bloodChip.dataset.group || '';
+      const sGroup = document.getElementById('searchBloodGroup');
+      if (sGroup) sGroup.value = group;
+      const sLoc = document.getElementById('searchLocation');
+      const location = sLoc ? sLoc.value.trim() : '';
+      loadDonors(group, location);
+      return;
+    }
+
+    // O. Request Priority Filter Tabs
+    const filterTab = target.closest('.filter-tab');
+    if (filterTab) {
+      e.preventDefault();
+      document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+      filterTab.classList.add('active');
+      const priority = filterTab.dataset.priority || 'ALL';
+      loadBloodRequests(priority);
+      return;
+    }
+
+    // P. Supabase Config Trigger
+    if (target.closest('#footerDbConfigBtn')) {
+      e.preventDefault();
+      const cfgUrl = document.getElementById('cfgSupabaseUrl');
+      const cfgKey = document.getElementById('cfgSupabaseAnonKey');
+      if (cfgUrl) cfgUrl.value = SUPABASE_CONFIG.url;
+      if (cfgKey) cfgKey.value = SUPABASE_CONFIG.anonKey;
+      openModal('configModal');
+      return;
+    }
+
+    // Q. Reset Supabase Config
+    if (target.closest('#btnResetDefaultConfig')) {
+      e.preventDefault();
+      resetSupabaseConfig();
+      return;
+    }
+  });
+
+  // --------------------------------------------------------------------------
+  // 2. Direct Element Event Listeners
+  // --------------------------------------------------------------------------
   // Mobile Hamburger Toggle
   const mobileToggle = document.getElementById('mobileMenuToggle');
   const navLinks = document.getElementById('navLinks');
@@ -1404,62 +1766,32 @@ function setupUIEventListeners() {
     });
   }
 
-  // Auth Modal Buttons
-  document.getElementById('navLoginBtn')?.addEventListener('click', () => openAuthModal('login'));
-  document.getElementById('navSignupBtn')?.addEventListener('click', () => openAuthModal('signup'));
-  document.getElementById('heroBecomeDonorBtn')?.addEventListener('click', () => openAuthModal('signup'));
-  document.getElementById('footerLoginLink')?.addEventListener('click', (e) => { e.preventDefault(); openAuthModal('login'); });
-  document.getElementById('footerSignupLink')?.addEventListener('click', (e) => { e.preventDefault(); openAuthModal('signup'); });
-  document.getElementById('tickerDonorBtn')?.addEventListener('click', () => openAuthModal('signup'));
-
-  // Request Blood Modal Triggers
-  const openReqModal = () => {
-    // Set default date to today or tomorrow
-    const today = new Date().toISOString().split('T')[0];
-    const dateInput = document.getElementById('reqDate');
-    if (dateInput) dateInput.min = today;
-    openModal('requestModal');
-  };
-  document.getElementById('heroRequestBloodBtn')?.addEventListener('click', openReqModal);
-  document.getElementById('btnOpenRequestBloodBottom')?.addEventListener('click', openReqModal);
-  document.getElementById('tickerRequestBtn')?.addEventListener('click', openReqModal);
-  document.getElementById('footerRequestLink')?.addEventListener('click', (e) => { e.preventDefault(); openReqModal(); });
-
-  // Dashboard Modal Triggers
-  document.getElementById('menuDashboardBtn')?.addEventListener('click', openDashboard);
+  // Dashboard Toggle Switch
   document.getElementById('donorAvailabilityToggle')?.addEventListener('change', handleAvailabilityToggle);
 
-  // Logout
-  document.getElementById('menuLogoutBtn')?.addEventListener('click', handleLogout);
-
-  // Auth Form Toggling
-  const tabLogin = document.getElementById('tabLoginBtn');
-  const tabSignup = document.getElementById('tabSignupBtn');
-  const loginForm = document.getElementById('loginForm');
-  const signupForm = document.getElementById('signupForm');
-
-  tabLogin?.addEventListener('click', () => {
-    tabLogin.classList.add('active');
-    tabSignup.classList.remove('active');
-    loginForm.style.display = 'block';
-    signupForm.style.display = 'none';
-  });
-
-  tabSignup?.addEventListener('click', () => {
-    tabSignup.classList.add('active');
-    tabLogin.classList.remove('active');
-    signupForm.style.display = 'block';
-    loginForm.style.display = 'none';
-  });
-
-  document.getElementById('linkSwitchToSignup')?.addEventListener('click', (e) => {
+  // Direct Click Handlers for Top-Level Navigation Actions
+  document.getElementById('navLoginBtn')?.addEventListener('click', (e) => {
     e.preventDefault();
-    tabSignup?.click();
+    openAuthModal('login');
   });
 
-  document.getElementById('linkSwitchToLogin')?.addEventListener('click', (e) => {
+  document.getElementById('navSignupBtn')?.addEventListener('click', (e) => {
     e.preventDefault();
-    tabLogin?.click();
+    openAuthModal('signup');
+  });
+
+  document.getElementById('btnLoginSubmit')?.addEventListener('click', (e) => {
+    const form = document.getElementById('loginForm');
+    if (form && !form.checkValidity()) {
+      form.reportValidity();
+    }
+  });
+
+  document.getElementById('btnSignupSubmit')?.addEventListener('click', (e) => {
+    const form = document.getElementById('signupForm');
+    if (form && !form.checkValidity()) {
+      form.reportValidity();
+    }
   });
 
   // Forms Submissions
@@ -1467,14 +1799,6 @@ function setupUIEventListeners() {
   document.getElementById('signupForm')?.addEventListener('submit', handleAuthSignup);
   document.getElementById('requestBloodForm')?.addEventListener('submit', handleBloodRequestSubmit);
   document.getElementById('donationLogForm')?.addEventListener('submit', handleLogDonationSubmit);
-
-  // Log Donation Button
-  document.getElementById('btnLogNewDonation')?.addEventListener('click', () => {
-    const today = new Date().toISOString().split('T')[0];
-    const donDate = document.getElementById('donDate');
-    if (donDate) donDate.value = today;
-    openModal('donationModal');
-  });
 
   // Dashboard Inner Tabs
   const tabDashReq = document.getElementById('tabDashRequests');
@@ -1484,67 +1808,31 @@ function setupUIEventListeners() {
 
   tabDashReq?.addEventListener('click', () => {
     tabDashReq.classList.add('active');
-    tabDashDon.classList.remove('active');
-    contentReq.style.display = 'block';
-    contentDon.style.display = 'none';
+    tabDashDon?.classList.remove('active');
+    if (contentReq) contentReq.style.display = 'block';
+    if (contentDon) contentDon.style.display = 'none';
   });
 
   tabDashDon?.addEventListener('click', () => {
     tabDashDon.classList.add('active');
-    tabDashReq.classList.remove('active');
-    contentDon.style.display = 'block';
-    contentReq.style.display = 'none';
+    tabDashReq?.classList.remove('active');
+    if (contentDon) contentDon.style.display = 'block';
+    if (contentReq) contentReq.style.display = 'none';
   });
 
-  // Donor Search Filters
+  // Donor Search Form
   document.getElementById('donorSearchForm')?.addEventListener('submit', (e) => {
     e.preventDefault();
-    const group = document.getElementById('searchBloodGroup').value;
-    const location = document.getElementById('searchLocation').value.trim();
+    const group = document.getElementById('searchBloodGroup')?.value || '';
+    const location = (document.getElementById('searchLocation')?.value || '').trim();
     loadDonors(group, location);
   });
 
-  document.getElementById('btnResetSearch')?.addEventListener('click', () => {
-    document.getElementById('searchBloodGroup').value = '';
-    document.getElementById('searchLocation').value = '';
-    document.querySelectorAll('.blood-chip').forEach(c => c.classList.remove('active'));
-    document.querySelector('.blood-chip[data-group=""]')?.classList.add('active');
-    loadDonors();
-  });
-
-  // Blood Group Quick Filter Chips
-  document.querySelectorAll('.blood-chip').forEach(chip => {
-    chip.addEventListener('click', () => {
-      document.querySelectorAll('.blood-chip').forEach(c => c.classList.remove('active'));
-      chip.classList.add('active');
-      const group = chip.dataset.group;
-      document.getElementById('searchBloodGroup').value = group;
-      const location = document.getElementById('searchLocation').value.trim();
-      loadDonors(group, location);
-    });
-  });
-
-  // Blood Request Priority Filter Tabs
-  document.querySelectorAll('.filter-tab').forEach(tab => {
-    tab.addEventListener('click', () => {
-      document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
-      tab.classList.add('active');
-      const priority = tab.dataset.priority;
-      loadBloodRequests(priority);
-    });
-  });
-
-  // Supabase Config Modal Trigger & Handlers
-  document.getElementById('footerDbConfigBtn')?.addEventListener('click', () => {
-    document.getElementById('cfgSupabaseUrl').value = SUPABASE_CONFIG.url;
-    document.getElementById('cfgSupabaseAnonKey').value = SUPABASE_CONFIG.anonKey;
-    openModal('configModal');
-  });
-
+  // Supabase Config Form Submission
   document.getElementById('supabaseConfigForm')?.addEventListener('submit', (e) => {
     e.preventDefault();
-    const url = document.getElementById('cfgSupabaseUrl').value.trim();
-    const key = document.getElementById('cfgSupabaseAnonKey').value.trim();
+    const url = (document.getElementById('cfgSupabaseUrl')?.value || '').trim();
+    const key = (document.getElementById('cfgSupabaseAnonKey')?.value || '').trim();
     if (saveSupabaseConfig(url, key)) {
       showToast('Supabase connection details updated! Reconnecting...', 'success');
       closeModal('configModal');
@@ -1552,29 +1840,9 @@ function setupUIEventListeners() {
     }
   });
 
-  document.getElementById('btnResetDefaultConfig')?.addEventListener('click', () => {
-    resetSupabaseConfig();
-  });
-
-  // Modal Generic Close Handlers
-  document.querySelectorAll('[data-close]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const modalId = btn.dataset.close;
-      closeModal(modalId);
-    });
-  });
-
-  document.querySelectorAll('.modal-overlay').forEach(modal => {
-    modal.addEventListener('click', (e) => {
-      if (e.target === modal) {
-        closeModal(modal.id);
-      }
-    });
-  });
-
   // Keyboard Escape to close modals
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
+    if (e && e.key === 'Escape') {
       document.querySelectorAll('.modal-overlay.active').forEach(m => closeModal(m.id));
     }
   });
@@ -1584,6 +1852,7 @@ function openModal(modalId) {
   const modal = document.getElementById(modalId);
   if (modal) {
     modal.classList.add('active');
+    modal.style.display = 'flex';
     document.body.style.overflow = 'hidden';
   }
 }
@@ -1592,17 +1861,24 @@ function closeModal(modalId) {
   const modal = document.getElementById(modalId);
   if (modal) {
     modal.classList.remove('active');
+    modal.style.display = 'none';
     document.body.style.overflow = '';
   }
 }
 
 function openAuthModal(tab = 'login') {
-  if (tab === 'signup') {
-    document.getElementById('tabSignupBtn')?.click();
-  } else {
-    document.getElementById('tabLoginBtn')?.click();
-  }
+  switchAuthTab(tab);
   openModal('authModal');
+}
+
+function openReqModal() {
+  const today = new Date().toISOString().split('T')[0];
+  const dateInput = document.getElementById('reqDate');
+  if (dateInput) {
+    dateInput.min = today;
+    if (!dateInput.value) dateInput.value = today;
+  }
+  openModal('requestModal');
 }
 
 // ============================================================================

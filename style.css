@@ -1724,3 +1724,33 @@ input:checked + .slider:before {
   animation: fadeIn 0.4s ease-out;
 }
 
+/* Authentication Alert Box */
+.auth-alert-box {
+  padding: 0.875rem 1rem;
+  border-radius: var(--radius-md);
+  font-size: 0.84375rem;
+  line-height: 1.5;
+  margin-bottom: 1.25rem;
+  display: none;
+  animation: fadeIn 0.25s ease-out;
+}
+
+.auth-alert-box.error {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+}
+
+.auth-alert-box.warning {
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  color: #92400e;
+}
+
+.auth-alert-box.info {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #166534;
+}
+
+
